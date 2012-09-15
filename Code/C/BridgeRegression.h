@@ -38,9 +38,15 @@
 #include "RNG.hpp"
 #include <iostream>
 #include "retstable.c"
+#include <math.h>
+#include <Eigen/Core>
+#include <Eigen/SVD>
 
 using std::cout;
 using std::cerr;
+
+#define MAX(a,b) ( (a) > (b) ? (a) : (b) )
+#define MIN(a,b) ( (a) < (b) ? (a) : (b) )
 
 //////////////////////////////////////////////////////////////////////
 			// CLASS DEFINITION //
@@ -66,6 +72,11 @@ class BridgeRegression
   Matrix RT;
   Matrix RTInv;
 
+  // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> M;
+  Eigen::MatrixXd tV;
+  Eigen::MatrixXd a;
+  Eigen::MatrixXd d;
+
  public:
 
   // Constructors:
@@ -75,12 +86,23 @@ class BridgeRegression
   // Least squares solution.
   void least_squares(Matrix & ls);
 
-  void rtnorm_gibbs(MF beta, MF bmean, MF P, double sig2, MF b, RNG& r);
+  // For sampling beta
+  void rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r);
+  void rtnorm_gibbs_wrapper(MF beta, double sig2, MF b, RNG& r);
 
-  // Posterior samplers.
+  void rtnorm_gibbs(double *betap, 
+		    double *ap, double *tVp, double *dp, 
+		    double* bp, double* sig2p, 
+		    int *Pp, RNG& r);
+
+  void sample_beta(MF beta, const MF& beta_prev, 
+		   const MF& u, const MF& omega, 
+		   double sig2, double tau, double alpha, 
+		   RNG& r, int niter=1);
+
+  // For sampling everything else.
   void sample_u(MF u, const MF& beta, const MF& omega, double tau, double alpha, RNG& r);
   void sample_omega(MF omega, const MF& beta, const MF& u, double tau, double alpha, RNG& r);
-  void sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter=1);
   void sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_scale, RNG& r);
   void sample_tau(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r);
 
@@ -137,6 +159,25 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
   symsqrt(RT, XX);
   syminvsqrt(RTInv, XX);
 
+  int n = X_.rows();
+  int p = X_.cols();
+  Eigen::Map<Eigen::MatrixXd> Xmap(&X(0), n, p);
+  Eigen::Map<Eigen::MatrixXd> ymap(&y(0), n, 1);
+  // Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeThinV);
+  // We need to deal with the underdetermined case.
+  Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeFullV);
+  Eigen::MatrixXd A = svd.matrixU() * svd.singularValues().asDiagonal();
+
+  tV = svd.matrixV().transpose();
+  a.resize(p, 1);
+  d.resize(p, 1);
+  int ddim = (p <= n) ? p : n;
+  a.block(0,0,ddim,1) = A.transpose() * ymap;
+  d.block(0,0,ddim,1) = svd.singularValues();
+
+  // cout << d;
+  // cout << "d:" << d.rows() << " " << d.cols() << "\n";
+
 } // Bridge Regression
 
 //////////////////////////////////////////////////////////////////////
@@ -157,6 +198,7 @@ void BR::least_squares(Matrix & ls)
     ls.clone(Matrix(P)); 
     ls.fill(0.0);
     printf("Warning: cannot calculate least squares estimate; X'X is singular.\n");
+    printf("Warning: setting least squares estimate to 0.0.\n");
   }
 }
 
@@ -271,52 +313,119 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+void BR::rtnorm_gibbs_wrapper(MF beta, double sig2, MF b, RNG& r)
+{
+  int Pint = P;
+  rtnorm_gibbs(&beta(0), &a(0), &tV(0), &d(0), &b(0), &sig2, &Pint, r);
+}
+
+void BR::rtnorm_gibbs(double *betap, 
+		      double *ap, double *tVp, double *dp, 
+		      double* bp, double* sig2p, 
+		      int *Pp, RNG& r)
+{
+  // Anything with a "p" suffix is a pointer.
+
+  int P = *Pp;
+  double sig = sqrt(*sig2p);
+  MatrixFrame beta(betap, P);
+  MatrixFrame tV(tVp, P, P);
+  Matrix z(tV, beta);
+  double *zp = &z(0);
+  // Matrix vj(P);
+
+  for (int i=0; i<P; i++) {
+    double lmax = -INFINITY;
+    double rmin =  INFINITY;
+
+    for (int j=0; j<P; j++) {
+      double vji = tVp[i+j*P];
+      MatrixFrame vj(&tVp[j*P], P);
+      // double rji = dot(tV.col(j), z) - vji * zp[i];
+      double rji = dot(vj, z) - vji * zp[i];
+      double dif = bp[j] - rji;
+      double sum = bp[j] + rji;
+      double left  = (vji > 0 ? -sum : -dif) / fabs(vji);
+      double right = (vji > 0 ?  dif :  sum) / fabs(vji);
+      lmax = MAX(lmax, left );
+      rmin = MIN(rmin, right);
+    }
+
+    // double dx = rmin - lmax;
+    double mean = ap[i] / (dp[i] * dp[i]);
+    double sd   = sig / dp[i];
+
+    // I need to be careful here.  It may be the case that dp is almost zero or negative!
+    if (dp[i] > 1e-8){
+      zp[i] = r.tnorm(lmax, rmin, mean, sd);
+    }
+    else {
+      // double lw = lmax < rmin ? lmax : rmin;
+      // double up = lmax > rmin ? lmax : rmin;
+      // if (lw!=lmax) printf("Problem with lmax,rmin: %g, %g \n", lmax, rmin);
+      // zp[i] = lw + (up-lw) * r.unif();
+      zp[i] = r.flat(lmax, rmin);
+    }
+
+  }
+
+  gemm(beta, tV, z, 'T', 'N');
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 // There are multiple ways one may calculate the conditional distributions of
 // beta_j | beta_{-j}.  Initially, I considered the joint distribution and then
 // used regression theory to calculate the conditional.  This is a bad idea--you
 // could have singular precisions.  It is better to calculate beta_j based upon
 // likelihood.
 
-// void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
-// {
-//   Matrix beta_sub(P-1);
-//   Matrix XXbeta(1); 
+#ifdef NOROTATE
 
-//   beta.copy(beta_prev);
+void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
+{
+  Matrix beta_sub(P-1);
+  Matrix XXbeta(1); 
 
-//   for(int i=0; i<niter; i++){
+  beta.copy(beta_prev);
 
-//     Matrix ss("N", P-1);
+  for(int i=0; i<niter; i++){
 
-//     for(uint j = 0; j < P; j++){
+    Matrix ss("N", P-1);
 
-//      XXbeta(0) = 0.0;
+    for(uint j = 0; j < P; j++){
+
+     XXbeta(0) = 0.0;
       
-//       // If P > 1.
-//       beta_sub.copy(beta, ss, 0);
-//       gemm(XXbeta, XX_sub[j], beta_sub);
-//       // Else keep XXbeta(0) = 0.
+      // If P > 1.
+      beta_sub.copy(beta, ss, 0);
+      gemm(XXbeta, XX_sub[j], beta_sub);
+      // Else keep XXbeta(0) = 0.
 
-//       // mean and variance
-//       double m = ( Xy(j) - XXbeta(0) ) / XX(j,j);
-//       double v = sig2 / XX(j,j);
+      // mean and variance
+      double m = ( Xy(j) - XXbeta(0) ) / XX(j,j);
+      double v = sig2 / XX(j,j);
 
-//       // Calculate b(j).
-//       double b_j = (1.0 - u(j)) * exp( log(omega(j)) / alpha) * tau;
+      // Calculate b(j).
+      double b_j = (1.0 - u(j)) * exp( log(omega(j)) / alpha) * tau;
 
-//       beta(j) = r.tnorm(-1.0*b_j, b_j, m, sqrt(v));
+      beta(j) = r.tnorm(-1.0*b_j, b_j, m, sqrt(v));
 
-//       // COMMENT COMMENT
-//       if (fabs(beta(j)) > b_j) {
-// 	cout << "b(j) problem: ";
-// 	cout << b_j << " " << beta(j) << "\n";
-//       }
-//       if (j < P-1) ss(j) = j;
-//     }
+      // COMMENT COMMENT
+      if (fabs(beta(j)) > b_j) {
+	cout << "b(j) problem: ";
+	cout << b_j << " " << beta(j) << "\n";
+      }
+      if (j < P-1) ss(j) = j;
+    }
 
-//   }
+  }
 
-// } // sample_beta
+} // sample_beta
+
+#else //------------------------------------------------------------------------------
 
 void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
 {
@@ -327,13 +436,16 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
   beta.copy(beta_prev);
 
   // Could precompute.
-  Matrix bhat(P);
-  least_squares(bhat);
+  // Matrix bhat(P);
+  // least_squares(bhat);
 
   for(int i=0; i<niter; i++) {
-    rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
+    // rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
+    rtnorm_gibbs_wrapper(beta, sig2, b, r);
   }
 } // sample_beta
+
+#endif
 
 //--------------------------------------------------------------------
 void BR::sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_scale, RNG& r)
