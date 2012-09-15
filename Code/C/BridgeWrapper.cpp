@@ -107,6 +107,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
       br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
@@ -122,6 +125,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i-1](0), alpha, r);
       br.sample_beta(beta[i], beta[i-1], u[i-1], omega[i], sig2[i](0), tau[i](0), alpha, r);
       br.sample_u(u[i], beta[i], omega[i], tau[i](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
@@ -193,6 +199,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_beta(beta[0], beta[0], u[0], omega[0], 
 		     sig2[0](0), tau[0](0), alpha, r, beta_iter);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
@@ -210,6 +219,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_beta(beta[i], beta[i-1], u[i-1], omega[i], 
 		     sig2[i](0), tau[i](0), alpha, r, beta_iter);
       br.sample_u(u[i], beta[i], omega[i], tau[i](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
@@ -283,6 +295,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
@@ -300,6 +315,9 @@ double bridge_regression(MatrixFrame & beta,
       br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta(beta[i], beta[i-1], u[i-1], omega[i], sig2[i](0), tau[i](0), alpha, r);
       br.sample_u(u[i], beta[i], omega[i], tau[i](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
     }
 
     end = clock();
