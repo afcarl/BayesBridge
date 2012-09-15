@@ -6,13 +6,16 @@
 int main(int argc, char** argv)
 {
   // The data.
-  Matrix X; X.read("X.lars", true);
-  Matrix y; y.read("Y.lars", true);
+  // Matrix X; X.read("X.lars", true);
+  // Matrix y; y.read("Y.lars", true);
+
+  Matrix X; X.read("X.nir", true);
+  Matrix y; y.read("y.nir", true);  
 
   // // True data.
   // Matrix beta_data; beta_data.read("beta.data", true);
 
-  uint M = 100000;
+  uint M = 10000;
   uint P = X.cols();
 
   double alpha = 0.5;
@@ -20,9 +23,8 @@ int main(int argc, char** argv)
   // Least squares.
   Matrix XX(X, X, 'T', 'N');
   Matrix ls(X, y, 'T', 'N');
-  symsolve(XX, ls);
-
-  cout << "LS:\n" << ls;
+  // symsolve(XX, ls);
+  // cout << "LS:\n" << ls;
 
   Matrix beta(P      , (uint)1, M);
 
@@ -36,7 +38,7 @@ int main(int argc, char** argv)
 
   bridge_regression(beta, u, omega,
 		    y, X,
-		    2500.0, 1.0, 0.5, 100);
+		    2500.0, 1.0, alpha, 100);
 
   printf("Regression done.  Write out.\n");
 
