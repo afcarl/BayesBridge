@@ -1,0 +1,6 @@
+PKG_CPPFLAGS = -I$(HOME)/RV-Project/Code/C_Examples/MyLib/ -I$(HOME)/Code/include/ -DUSE_R
+# I should check if they have GSL installed and use it if
+# they do because things seem to run faster.
+# Though maybe that's only true if you don't compile with R CMD shlib.
+# PKG_LIBS = -L$(HOME)/Code/lib -lblas -llapack -lgsl
+PKG_LIBS = -lblas -llapack
