@@ -25,21 +25,24 @@ sum.stat <- function(gbs)
                                   ## Setup ##
 ################################################################################
 
-run <- list("EFRON" = FALSE, # Efron's diabetes data
-            "BH"    = FALSE, # Boston Housing
-            "BHI"   = FALSE, # Boston Housing with interactions
+run <- list("EFRON" = TRUE , # Efron's diabetes data
+            "BH"    = TRUE , # Boston Housing
+            "BHI"   = TRUE , # Boston Housing with interactions
             "NIR"   = FALSE) # NIR
 
 ## Ortogonalizing matrices by QR.
 ortho <- list("EFRON" = FALSE,
               "BH"    = FALSE,
-              "BHI"   = TRUE)
+              "BHI"   = FALSE)
 
 methods = c("rotate", "norotate", "package")
 method = "rotate"
 
-save.it  = FALSE ## WRITE OUTPUT TO FILE
+known.tau = FALSE
+
+save.it  = TRUE ## Write output to file
 plot.it  = FALSE ## Plot histograms
+print.it = FALSE ## Print summary.
 
 ################################################################################
                            ## Load .so or package ##
@@ -72,11 +75,11 @@ if (FALSE) {
   dyn.unload("Bridge.so")
   if (!is.loaded("Bridge.so")) dyn.load("~/RPackage/BayesBridge/Code/R/Bridge.so");
   source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
-  load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
 }
 
 if (FALSE) {
 
+  load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
   cov.name = colnames(diabetes$x);
   y = diabetes$y;
   X = diabetes$x;
@@ -97,6 +100,8 @@ if (FALSE) {
   gb2 = bridge.reg.know.tau.R(y, X, nsamp/2, alpha=0.5, tau=100.0, burn=100, verbose=500);
   gb4 = bridge.reg.know.tau.stable(y, X, nsamp, 0.5, 100.0, 0.0, 0.0, 500);
 
+  gb5 = bridge.reg.stable(y, X, nsamp, 0.5, 0.0, 0.0, 2, 1/2, 500)
+
   sstat.2 = sum.stat(gb2);
   sstat.4 = sum.stat(gb4);
 
@@ -115,9 +120,9 @@ if (FALSE) {
                              ## Compare Routines ##
 ################################################################################
 
-compare.known.tau <- function(y, X, nsamp=10000,
-                              alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, burn=0,
-                              ntrials=1)
+compare.it <- function(y, X, nsamp=10000,
+                       alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=0.5,
+                       burn=0, ntrials=1)
 {
   ## Returns a list of summary statistics, the last Gibbs MCMC, and a
   ## table with the average statistics over several runs.
@@ -130,11 +135,15 @@ compare.known.tau <- function(y, X, nsamp=10000,
   stb.stat = list();
 
   for (i in 1:ntrials){
-
-    ## Known Tau
-    gb.tri = bridge.reg.know.tau(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn, 1);
-    gb.stb = bridge.reg.know.tau.stable(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn);
-
+    
+    if (!known.tau) { ## Known tau, unknown sigma.
+      gb.tri = bridge.reg.know.tau(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn, 1);
+      gb.stb = bridge.reg.know.tau.stable(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn);
+    } else {         ## Unknown tau, sigma.
+      gb.tri = bridge.reg(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn);
+      gb.stb = bridge.reg.stable(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn)
+    }
+    
     sstat.tri = sum.stat(gb.tri);
     sstat.stb = sum.stat(gb.stb);
 
@@ -161,44 +170,70 @@ compare.known.tau <- function(y, X, nsamp=10000,
   OUT
 }
 
-run.known.tau <- function(y, X, nsamp=1000,  burn=100, 
-                          alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, ntrials=1,
-                          save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun")
+plot.info <- function(info, P=nrow(info$tri.gb$beta))
+{
+  ## sig2
+  par(mfrow=c(1,2));
+  hist(info$tri.gb$sig2, breaks=100, prob=TRUE, main=paste("tri: sig2"));
+  hist(info$stb.gb$sig2, breaks=100, prob=TRUE, main=paste("stb: sig2"));
+  cat("sig2: \n");
+  cat("tri:", mean(info$tri.gb$sig2), sd(info$tri.gb$sig2), "\n");
+  cat("stb:", mean(info$stb.gb$sig2), sd(info$stb.gb$sig2), "\n");
+  readline("Press Enter...");
+
+  ## tau
+  if (!is.null(info$tri.gb$tau)) {
+    par(mfrow=c(1,2));
+    hist(info$tri.gb$tau, breaks=100, prob=TRUE, main=paste("tri: tau"));
+    hist(info$stb.gb$tau, breaks=100, prob=TRUE, main=paste("stb: tau"));
+    cat("tau: \n");
+    cat("tri:", mean(info$tri.gb$tau), sd(info$tri.gb$tau), "\n");
+    cat("stb:", mean(info$stb.gb$tau), sd(info$stb.gb$tau), "\n");
+    readline("Press Enter...");
+  }
+
+  ## beta
+  for(i in 1:P){
+    par(mfrow=c(1,2));
+    hist(info$tri.gb$beta[i,], breaks=100, prob=TRUE, main=paste("tri:", cnames[i]));
+    hist(info$stb.gb$beta[i,], breaks=100, prob=TRUE, main=paste("stb:", cnames[i]));
+    cat("Variable", i, "\n");
+    cat("tri:", mean(info$tri.gb$beta[i,]), sd(info$tri.gb$beta[i,]), "\n");
+    cat("stb:", mean(info$stb.gb$beta[i,]), sd(info$stb.gb$beta[i,]), "\n");
+    readline("Press Enter...");
+  }
+}
+
+run.it <- function(y, X, nsamp=1000,  burn=100, 
+                   alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=0.5,
+                   ntrials=1, save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun")
 {
   ## Runs the comparison and plots/prints/saves the resulting data.
   
-  info = compare.known.tau(y, X, nsamp=nsamp,
-    alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, burn=burn,
+  info = compare.it(y, X, nsamp=nsamp,
+    alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, nu.shape, nu.rate, burn=burn,
     ntrials=ntrials)
 
   ## Make sure things look right.
   if (plot.it) {
-    for(i in 1:ncol(X)){
-      par(mfrow=c(1,2));
-      hist(info$tri.gb$beta[i,], breaks=100, prob=TRUE, main=paste("tri:", cnames[i]));
-      hist(info$stb.gb$beta[i,], breaks=100, prob=TRUE, main=paste("stb:", cnames[i]));
-      cat("Variable", i, "\n");
-      cat("tri:", mean(info$tri.gb$beta[i,]), sd(info$tri.gb$beta[i,]), "\n");
-      cat("stb:", mean(info$stb.gb$beta[i,]), sd(info$stb.gb$beta[i,]), "\n");
-      readline("Press Enter...");
-    }
+    plot.info(info);
   }
 
   if (print.it) {
-    cat("Info size:", object.size(info) / 2^20, "Mb\n")
     print("tri.stat:")
     print(info$tri.stat[[ntrials]])
     print("stb.stat:")
     print(info$stb.stat[[ntrials]])
   }
 
+  cat("Info size:", object.size(info) / 2^20, "Mb\n")
   print("tri:")
   print(info$tri.info)
   print("stb:")
   print(info$stb.info)
 
   filename = paste("info", name, "RData", sep=".");
-  if (save.it) save(info, file="info.efron.RData", compress=TRUE);
+  if (save.it) save(info, file=filename, compress=TRUE);
 
   info
 }
@@ -214,10 +249,10 @@ if (run$EFRON) {
 
   ## RUN INFO
   nsamp = 10000
-  burn  = 1000
+  burn  = 2000
   alpha = 0.5
-  tau   = 100
-  ntrials = 1
+  tau   = 41
+  ntrials = 10
   
   ## Load data.
   load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
@@ -231,9 +266,9 @@ if (run$EFRON) {
   mX = colMeans(X);
   for(i in 1:442){ X[i,] = X[i,] - mX; }
 
-  info <- run.known.tau(y, X, nsamp=nsamp, burn=burn,
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
                         alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
-                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron")
+                        save.it=save.it, print.it=print.it, plot.it=plot.it, name="efron")
 
 }
 
@@ -244,10 +279,10 @@ if (run$BH) {
 
   ## RUN INFO
   nsamp = 10000
-  burn = 1000
+  burn = 2000
   alpha = 0.5
-  tau   = 100
-  ntrials = 1
+  tau   = 0.15
+  ntrials = 10
   
   data("BostonHousing", package="mlbench")
 
@@ -256,11 +291,18 @@ if (run$BH) {
 
   ## No interactions or squared terms.
   X = model.matrix(medv ~ ., data=BostonHousing);
+
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  X = X[,-1]
+  
   cnames = colnames(X);
 
-  info <- run.known.tau(y, X, nsamp=nsamp, burn=burn,
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
                         alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
-                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="BH")  
+                        save.it=save.it, print.it=print.it, plot.it=plot.it, name="BH")  
 
 }
 
@@ -271,10 +313,10 @@ if (run$BHI) {
 
   ## RUN INFO
   nsamp = 10000
-  burn = 1000
+  burn = 2000
   alpha = 0.5
   tau   = 100
-  ntrials = 1
+  ntrials = 10
   
   data("BostonHousing", package="mlbench")
 
@@ -299,11 +341,17 @@ if (run$BHI) {
     X = cbind(X, BostonHousing[,idc[i]] * BostonHousing[,idc[i]]);
   }
 
-  colnames(X) = cnames
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  X = X[,-1]
 
-  info <- run.known.tau(y, X, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
-                        save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI")
+  cnames = colnames(X);
+
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
+                 alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                 save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI")
   
 }
 
@@ -325,7 +373,7 @@ if (run$NIR) {
 
   ## RUN INFO
   nsamp = 10000
-  burn  = 1000
+  burn  = 2000
   alpha = 0.5
   tau   = 100
   ntrials = 1
@@ -338,9 +386,9 @@ if (run$NIR) {
   X = cbind(1.0, NIR$xNIR);
   X = as.matrix(X);
 
-  info <- run.known.tau(y, X, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
-                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="NIR")
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
+                 alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                 save.it=save.it, print.it=TRUE, plot.it=plot.it, name="NIR")
 
 }
 
@@ -374,7 +422,7 @@ if (ortho$EFRON) {
   Q = qr.Q(qr(X))
   colnames(Q) = c(1:ncol(Q))
 
-  info <- run.known.tau(y, Q, nsamp=nsamp, burn=burn,
+  info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
                         save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron-ortho")
   
@@ -400,11 +448,17 @@ if (ortho$BH) {
   ## No interactions or squared terms.
   X = model.matrix(medv ~ ., data=BostonHousing);
 
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  X = X[,-1]
+
   ## Ortongonalize
   Q = qr.Q(qr(X))
   colnames(Q) = c(1:ncol(Q))
 
-  info <- run.known.tau(y, Q, nsamp=nsamp, burn=burn,
+  info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
                         save.it=save.it, print.it=TRUE, plot.it=plot.it, name="BH-ortho")  
 
@@ -445,11 +499,17 @@ if (ortho$BHI) {
     X = cbind(X, BostonHousing[,idc[i]] * BostonHousing[,idc[i]]);
   }
 
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  X = X[,-1]
+  
   ## Ortongonalize
   Q = qr.Q(qr(X))
   colnames(Q) = c(1:ncol(Q))
 
-  info <- run.known.tau(y, Q, nsamp=nsamp, burn=burn,
+  info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
                         save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI-ortho")
   
