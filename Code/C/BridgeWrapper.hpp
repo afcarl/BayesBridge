@@ -215,6 +215,26 @@ extern "C"
   			 const int *burn_in,
 			 double *runtime);
 
+  void bridge_regression_all(double *betap,
+			 double *up,
+			 double *omegap,
+			 double *sig2p,
+			 double *taup,
+			 const double *yp,
+			 const double *Xp,
+			 const double *alpha,
+			 const double *sig2_shape,
+			 const double *sig2_scale,
+			 const double *nu_shape,
+			 const double *nu_rate,
+			 const double *true_sig2,
+			 const double *true_tau,
+			 const int *P,
+			 const int *N,
+			 const int *M,
+			 const int *burn,
+			 double *runtime);
+
   void rtnorm_left(double *x, double *left, double *mu, double *sig, int *num);
 
   void rtnorm_both(double *x, double *left, double* right, double *mu, double *sig, int *num);

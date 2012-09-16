@@ -622,6 +622,64 @@ void bridge_regression(double *betap,
 
 } // bridge_regression
 
+void bridge_regression_all(double *betap,
+		       double *up,
+		       double *omegap,
+		       double *sig2p,
+		       double *taup,
+		       const double *yp,
+		       const double *Xp,
+		       const double *alpha,
+		       const double *sig2_shape,
+		       const double *sig2_scale,
+		       const double *nu_shape,
+		       const double *nu_rate,
+		       const double *true_sig2,
+		       const double *true_tau,
+		       const int *P,
+		       const int *N,
+		       const int *M,
+		       const int *burn,
+		       double *runtime)
+{
+  Matrix y(yp, *N,  1);
+  Matrix X(Xp, *N, *P);
+
+  Matrix beta(*P, 1, *M);
+  Matrix u    (*P, 1, *M, 0.0);
+  Matrix omega(*P, 1, *M, 1.0);
+  Matrix sig2( 1, 1, *M);
+  Matrix tau ( 1, 1, *M);
+
+  #ifdef USE_R
+  GetRNGstate();
+  #endif
+
+  *runtime = bridge_regression(beta, u, omega, sig2, tau, y, X,
+			       *alpha,
+			       *sig2_shape, *sig2_scale,
+			       *nu_shape, *nu_rate,
+			       *true_sig2, *true_tau,
+			       *burn);
+
+  #ifdef USE_R
+  PutRNGstate();
+  #endif
+
+  MatrixFrame beta_mf (betap, *P, 1 , *M);
+  MatrixFrame u_mf    (up    , *P, 1, *M);
+  MatrixFrame omega_mf(omegap, *P, 1, *M);
+  MatrixFrame sig2_mf (sig2p, 1 , 1 , *M);
+  MatrixFrame tau_mf  (taup , 1 , 1 , *M);
+
+  beta_mf.copy(beta);
+  u_mf.copy(u);
+  omega_mf.copy(omega);
+  sig2_mf.copy(sig2);
+  tau_mf.copy (tau );
+
+} // bridge_regression
+
 
 /*
 void passnothing(void)
