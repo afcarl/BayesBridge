@@ -358,7 +358,7 @@ void BR::rtnorm_gibbs(double *betap,
     double sd   = sig / dp[i];
 
     // I need to be careful here.  It may be the case that dp is almost zero or negative!
-    if (dp[i] > 1e-8){
+    if (dp[i] > 1e-16){
       zp[i] = r.tnorm(lmax, rmin, mean, sd);
     }
     else {
@@ -382,7 +382,7 @@ void BR::rtnorm_gibbs(double *betap,
 // could have singular precisions.  It is better to calculate beta_j based upon
 // likelihood.
 
-#ifdef NOROTATE
+#ifdef ORTHOGONAL
 
 void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
 {
@@ -489,6 +489,18 @@ void BR::sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r)
 //------------------------------------------------------------------------------
 void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r)
 {
+
+  #ifdef ORTHOGONAL
+
+  for(uint i=0; i<P; i++) {
+    double u = (XX(i,i) + lambda(i) * sig2 / (tau * tau));
+    double s = sqrt(sig2 / u);
+    double m = Xy(i) / u;
+    beta(i) = r.norm(m, s);
+  }
+
+  #else
+
   Matrix VInv(XX);
   for(uint i=0; i<P; i++)
     VInv(i,i) += lambda(i) * sig2 / (tau * tau);
@@ -512,6 +524,9 @@ void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, doubl
   // cout << "ndraw:\n" << ndraw;
 
   gemm(beta, L, ndraw, 'N', 'N', 1.0, 1.0);
+
+  #endif
+
 }
 
 //////////////////////////////////////////////////////////////////////
