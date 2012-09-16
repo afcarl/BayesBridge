@@ -107,6 +107,22 @@ void bridge_regression_test(MatrixFrame & beta,
 			    double nu_rate,
 			    uint burn_in);
 
+double bridge_regression(MatrixFrame & beta,
+			 MatrixFrame & u,
+			 MatrixFrame & omega,
+			 MatrixFrame & sig2,
+			 MatrixFrame & tau,
+			 const MatrixFrame & y,
+			 const MatrixFrame & X,
+			 double alpha,
+			 double sig2_shape,
+			 double sig2_scale,
+			 double nu_shape,
+			 double nu_rate,
+			 double true_sig2,  
+			 double true_tau , 
+			 uint burn);
+
 double bridge_regression_stable(MatrixFrame & beta,
 			      MatrixFrame & lambda,
 			      MatrixFrame & sig2,
@@ -117,6 +133,19 @@ double bridge_regression_stable(MatrixFrame & beta,
 			      double sig2_shape,
 			      double sig2_scale,
 			      uint burn_in);
+
+double bridge_regression_stable(MatrixFrame & beta,
+				MatrixFrame & lambda,
+				MatrixFrame & sig2,
+				MatrixFrame & tau,
+				const MatrixFrame & y,
+				const MatrixFrame & X,
+				double alpha,
+				double sig2_shape,
+				double sig2_scale,
+				double nu_shape,
+				double nu_rate,
+				uint burn);
 
 //////////////////////////////////////////////////////////////////////
 			    // WRAPPERS //
@@ -204,6 +233,23 @@ extern "C"
 				  const int *M,
 				  const int *burn_in,
 				  double *runtime);
+
+  void bridge_reg_stable(double *betap,
+			 double *lambdap,
+			 double *sig2p,
+			 double *taup,
+			 const double *yp,
+			 const double *Xp,
+			 const double *alpha,
+			 const double *sig2_shape,
+			 const double *sig2_scale,
+			 const double *nu_shape,
+			 const double *nu_rate,
+			 const int *P,
+			 const int *N,
+			 const int *M,
+			 const int *burn,
+			 double *runtime);
 
 }
 
