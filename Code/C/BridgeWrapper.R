@@ -194,17 +194,18 @@ bridge.reg <- function(y, X,
     sig2  = array(0, dim=c(M));
     tau   = array(0, dim=c(M));
 
-    OUT = .C("bridge_regression",
-             beta, u, omega, sig2, tau,
-             as.double(y), as.double(X),
-             alpha,
-             sig2.shape, sig2.scale,
-             nu.shape, nu.rate,
-             as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
-             PACKAGE="Bridge");
+    OUT <- .C("bridge_regression_all",
+              beta, u, omega, sig2, tau,
+              as.double(y), as.double(X),
+              alpha,
+              sig2.shape, sig2.scale,
+              nu.shape, nu.rate,
+              true.sig2=0.0, true.tau=0.0,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
+              PACKAGE="Bridge");
 
     output <- list("beta"=OUT[[1]], "u"=OUT[[2]], "w"=OUT[[3]], "sig2"=OUT[[4]], "tau"=OUT[[5]],
-                   "runtime"=OUT[[17]]);
+                   "runtime"=OUT[[19]]);
 
     rownames(output$beta) = colnames(X);
 
@@ -346,6 +347,41 @@ bridge.reg.know.tau.stable <- function(y, X,
              PACKAGE="Bridge");
 
     output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "runtime"=OUT[[14]])
+    rownames(output$beta) = colnames(X);
+
+    output
+}
+
+bridge.reg.stable <- function(y, X,
+                              nsamp,
+                              alpha=0.5,
+                              sig2.shape=0.0, sig2.scale=0.0,
+                              nu.shape=2.0, nu.rate=1/2,
+                              burn=500){
+    N = length(y);
+    R = dim(X)[1];
+    P = dim(X)[2];
+    M = nsamp;
+    rt = 0;
+    
+    ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    if (!ok) { break; }
+
+    beta   = array(0, dim=c(P, M));
+    lambda = array(0, dim=c(P, M));
+    sig2  = array(0, dim=c(M));
+    tau   = array(0, dim=c(M));
+
+    OUT <- .C("bridge_reg_stable",
+              beta, lambda, sig2, tau,
+              as.double(y), as.double(X),
+              alpha,
+              sig2.shape, sig2.scale,
+              nu.shape, nu.rate,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
+              PACKAGE="Bridge");
+
+    output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[16]])
     rownames(output$beta) = colnames(X);
 
     output
