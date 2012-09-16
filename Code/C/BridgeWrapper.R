@@ -113,7 +113,7 @@ bridge.reg.tri <- function(y, X,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=0.5, nu.rate=0.5,
                            sig2.true=0.0, tau.true=0.0,
-                           burn=500)
+                           burn=500, ortho=FALSE)
 {
     N = length(y);
     R = dim(X)[1];
@@ -137,7 +137,7 @@ bridge.reg.tri <- function(y, X,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
               sig2.true, tau.true,
-              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rtime,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rtime, as.integer(ortho),
               PACKAGE="Bridge");
 
     output <- list("beta"=OUT[[1]], "u"=OUT[[2]], "w"=OUT[[3]], "sig2"=OUT[[4]], "tau"=OUT[[5]],
@@ -158,7 +158,7 @@ bridge.reg.stb <- function(y, X,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=2.0, nu.rate=2.0,
                            sig2.true=0.0, tau.true=0.0,
-                           burn=500)
+                           burn=500, ortho=FALSE)
 {
     N = length(y);
     R = dim(X)[1];
@@ -181,7 +181,7 @@ bridge.reg.stb <- function(y, X,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
               sig2.true, tau.true,
-              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(ortho),
               PACKAGE="Bridge");
 
     output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[18]])
@@ -200,7 +200,7 @@ bridge.reg <- function(y, X,
                        sig2.shape=0.0, sig2.scale=0.0,
                        nu.shape=2.0, nu.rate=2.0,
                        sig2.true=0.0, tau.true=0.0,
-                       burn=500, method="triangle")
+                       burn=500, method="triangle", ortho=FALSE)
 {
   out = NULL
   
@@ -211,7 +211,7 @@ bridge.reg <- function(y, X,
       sig2.shape=0.0, sig2.scale=0.0,
       nu.shape=0.5, nu.rate=0.5,
       sig2.true=0.0, tau.true=0.0,
-      burn=500)
+      burn=500, ortho=ortho)
   }
   else if (method=="stable") {
     out = bridge.reg.stb(y, X,
@@ -220,7 +220,7 @@ bridge.reg <- function(y, X,
       sig2.shape=0.0, sig2.scale=0.0,
       nu.shape=0.5, nu.rate=0.5,
       sig2.true=0.0, tau.true=0.0,
-      burn=500)
+      burn=500, ortho=ortho)
   }
   else {
     print("Unrecognized method.  Use \"triangles\" or \"stable\".");

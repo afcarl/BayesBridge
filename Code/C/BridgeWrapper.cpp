@@ -177,6 +177,197 @@ double bridge_regression_stable(MatrixFrame & beta,
   if (know_tau ) printf(", tau=%g", true_tau);
   printf("\nBurn-in: %i, Num. Samples: %i\n", burn, M);
 
+  // Initialize.
+  Matrix ls;
+  br.least_squares(ls);
+  beta[0].copy(ls);
+
+  if ( know_sig2 ) sig2.fill(true_sig2);
+  if ( know_tau  ) tau.fill(true_tau);
+
+  RNG r;
+
+  // Keep track of time.
+  clock_t start, end;
+
+  start = clock();
+
+  // br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+
+  // Burn-In.
+  for(uint i = 0; i < burn+1; i++){
+    if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+    br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
+    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+    br.sample_beta_stable(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
+    #ifdef USE_R
+    if (i % 10 == 0) R_CheckUserInterrupt();
+    #endif
+  }
+
+  end = clock();
+
+  double total_time = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
+  printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
+
+  start = clock();
+
+  // MCMC
+  for(uint i = 1; i < M; i++){
+    if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
+    br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
+    if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
+    br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
+    #ifdef USE_R
+    if (i % 10 == 0) R_CheckUserInterrupt();
+    #endif
+  }
+
+  end = clock();
+
+  cout << "Sampling complete: " << (double)(end - start) / CLOCKS_PER_SEC
+       << " sec. for " << M << " iterations." << "\n";
+
+  return (double)(end - start) / CLOCKS_PER_SEC;
+
+} // bridge_regression
+
+////////////////////////////////////////////////////////////////////////////////
+				// ORTHOGONAL //
+////////////////////////////////////////////////////////////////////////////////
+
+//--------------------------------------------------------------------
+double bridge_regression_ortho(MatrixFrame & beta,
+			 MatrixFrame & u,
+			 MatrixFrame & omega,
+			 MatrixFrame & sig2,
+			 MatrixFrame & tau,
+			 const MatrixFrame & y,
+			 const MatrixFrame & X,
+			 double alpha,
+			 double sig2_shape,
+			 double sig2_scale,
+			 double nu_shape,
+			 double nu_rate,
+			 double true_sig2, // 
+			 double true_tau , // Stored in tau  if true.
+			 uint burn)
+{
+  BridgeRegression br(X, y);
+
+  // uint P = X.cols();
+  // uint N = X.rows();
+  uint M = beta.mats();
+  bool know_sig2 = true_sig2 > 0;
+  bool know_tau  = true_tau  > 0;
+
+  // Details.
+  printf("Bridge Regression (Triangles): known alpha=%g", alpha);
+  if (know_sig2) printf(", sig2=%g", true_sig2);
+  if (know_tau ) printf(", tau=%g", true_tau);
+  printf("\nAssuming orthogonal design matrix!");
+  printf("\nBurn-in: %i, Num. Samples: %i\n", burn, M);
+
+  // Initialize.
+  Matrix ls;
+  br.least_squares(ls);
+  beta[0].copy(ls);
+
+  u[0].fill(0.0);
+
+  if ( know_sig2 ) sig2.fill(true_sig2);
+  if ( know_tau  ) tau.fill(true_tau);
+
+  RNG r;
+
+  // Keep track of time.
+  clock_t start, end;
+
+  try {
+
+    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+    if (!know_tau ) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+
+    start = clock();
+
+    // Burn-In.
+    for(uint i = 0; i < burn; i++){
+      if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
+      br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
+      if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+      br.sample_beta_ortho(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+
+    end = clock();
+
+    double total_time = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
+    printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
+
+    start = clock();
+
+    // MCMC
+    for(uint i = 1; i < M; i++){
+      if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
+      br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
+      if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
+      br.sample_beta_ortho(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+
+    end = clock();
+
+    cout << "Sampling complete: "  << (double)(end - start) / CLOCKS_PER_SEC 
+	 << " sec. for " << M << " iterations." << "\n";
+
+  }
+  catch (std::exception& e) {
+    printf("Error: %s\n", e.what());
+    printf("Aborting Gibbs sampler.\n");
+  }
+
+  return (double)(end - start) / CLOCKS_PER_SEC;
+
+} // bridge_regression
+
+//--------------------------------------------------------------------
+double bridge_regression_stable_ortho(MatrixFrame & beta,
+				MatrixFrame & lambda,
+				MatrixFrame & sig2,
+				MatrixFrame & tau,
+				const MatrixFrame & y,
+				const MatrixFrame & X,
+				double alpha,
+				double sig2_shape,
+				double sig2_scale,
+				double nu_shape,
+				double nu_rate,
+				double true_sig2,
+				double true_tau,
+				uint burn)
+{
+  BridgeRegression br(X, y);
+
+  // uint P = X.cols();
+  // uint N = X.rows();
+  uint M = beta.mats();
+  bool know_sig2 = true_sig2 > 0;
+  bool know_tau  = true_tau  > 0;
+
+  // Details.
+  printf("Bridge Regression (Stable): known alpha=%g", alpha);
+  if (know_sig2) printf(", sig2=%g", true_sig2);
+  if (know_tau ) printf(", tau=%g", true_tau);
+  printf("\nAssuming orthogonal design matrix!");
+  printf("\nBurn-in: %i, Num. Samples: %i\n", burn, M);
 
   // Initialize.
   Matrix ls;
@@ -199,8 +390,8 @@ double bridge_regression_stable(MatrixFrame & beta,
   for(uint i = 0; i < burn+1; i++){
     if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
     br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
-    br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
-    if (!know_sig2) br.sample_beta_stable(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
+    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+    br.sample_beta_stable_ortho(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
     #ifdef USE_R
     if (i % 10 == 0) R_CheckUserInterrupt();
     #endif
@@ -218,8 +409,8 @@ double bridge_regression_stable(MatrixFrame & beta,
   for(uint i = 1; i < M; i++){
     if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
     br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
-    br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-    if (!know_sig2) br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
+    if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
+    br.sample_beta_stable_ortho(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
     #ifdef USE_R
     if (i % 10 == 0) R_CheckUserInterrupt();
     #endif
@@ -233,6 +424,7 @@ double bridge_regression_stable(MatrixFrame & beta,
   return (double)(end - start) / CLOCKS_PER_SEC;
 
 } // bridge_regression
+
 
 //////////////////////////////////////////////////////////////////////
 				 // WRAPPERS //
@@ -284,7 +476,8 @@ void bridge_regression(double *betap,
 		       const int *N,
 		       const int *M,
 		       const int *burn,
-		       double *runtime)
+		       double *runtime,
+		       const bool *ortho)
 {
   Matrix y(yp, *N,  1);
   Matrix X(Xp, *N, *P);
@@ -299,12 +492,25 @@ void bridge_regression(double *betap,
   GetRNGstate();
   #endif
 
-  *runtime = bridge_regression(beta, u, omega, sig2, tau, y, X,
-			       *alpha,
-			       *sig2_shape, *sig2_scale,
-			       *nu_shape, *nu_rate,
-			       *true_sig2, *true_tau,
-			       *burn);
+  if (!*ortho) {
+
+    *runtime = bridge_regression(beta, u, omega, sig2, tau, y, X,
+				 *alpha,
+				 *sig2_shape, *sig2_scale,
+				 *nu_shape, *nu_rate,
+				 *true_sig2, *true_tau,
+				 *burn);
+  }
+  else {
+
+    *runtime = bridge_regression_ortho(beta, u, omega, sig2, tau, y, X,
+				       *alpha,
+				       *sig2_shape, *sig2_scale,
+				       *nu_shape, *nu_rate,
+				       *true_sig2, *true_tau,
+				       *burn);
+
+  }
 
   #ifdef USE_R
   PutRNGstate();
@@ -342,7 +548,8 @@ void bridge_reg_stable(double *betap,
 		       const int *N,
 		       const int *M,
 		       const int *burn,
-		       double *runtime)
+		       double *runtime,
+		       const bool *ortho)
 {
   Matrix y(yp, *N,  1);
   Matrix X(Xp, *N, *P);
@@ -356,13 +563,24 @@ void bridge_reg_stable(double *betap,
   GetRNGstate();
   #endif
 
-  *runtime = bridge_regression_stable(beta, lambda, sig2, tau,
-				      y, X,
-				      *alpha,
-				      *sig2_shape, *sig2_scale,
-				      *nu_shape, *nu_rate,
-				      *true_sig2, *true_tau,
-				      (uint)*burn);
+  if (!*ortho) {
+    *runtime = bridge_regression_stable(beta, lambda, sig2, tau,
+					y, X,
+					*alpha,
+					*sig2_shape, *sig2_scale,
+					*nu_shape, *nu_rate,
+					*true_sig2, *true_tau,
+					(uint)*burn);
+  }
+  else {
+        *runtime = bridge_regression_stable_ortho(beta, lambda, sig2, tau,
+						  y, X,
+						  *alpha,
+						  *sig2_shape, *sig2_scale,
+						  *nu_shape, *nu_rate,
+						  *true_sig2, *true_tau,
+						  (uint)*burn);
+  }
 
   #ifdef USE_R
   PutRNGstate();

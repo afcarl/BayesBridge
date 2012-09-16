@@ -31,16 +31,16 @@ run <- list("EFRON" = TRUE, # Efron's diabetes data
             "NIR"   = FALSE) # NIR
 
 ## Ortogonalizing matrices by QR.
-ortho <- list("EFRON" = FALSE,
-              "BH"    = FALSE,
-              "BHI"   = FALSE)
+oth <- list("EFRON" = FALSE,
+            "BH"    = FALSE,
+            "BHI"   = FALSE)
 
 ## RUN INFO
 nsamp = 10000
 burn = 2000
 alpha = 0.5
 ntrials = 1
-tau = 100 ## Set to <= 0 for unknown tau.
+tau = 0 ## Set to <= 0 for unknown tau.
 
 save.it  = FALSE ## Write output to file
 plot.it  = FALSE ## Plot histograms
@@ -114,8 +114,8 @@ if (FALSE) {
 compare.it <- function(y, X, nsamp=10000,
                        alpha=0.5,
                        sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
-                       tau=0.0,
-                       burn=0, ntrials=1)
+                       tau=0.0, 
+                       burn=0, ntrials=1, ortho=FALSE)
 {
   ## Returns a list of summary statistics, the last Gibbs MCMC, and a
   ## table with the average statistics over several runs.
@@ -129,8 +129,8 @@ compare.it <- function(y, X, nsamp=10000,
 
   for (i in 1:ntrials){
     
-    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn);
-    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn)
+    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn, ortho);
+    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn, ortho)
     
     sstat.tri = sum.stat(gb.tri);
     sstat.stb = sum.stat(gb.stb);
@@ -197,8 +197,9 @@ plot.info <- function(info, P=nrow(info$tri.gb$beta))
 ##------------------------------------------------------------------------------
 
 run.it <- function(y, X, nsamp=1000,  burn=100, 
-                   alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,  tau=0.0,
-                   ntrials=1, save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun")
+                   alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
+                   ntrials=1, tau=0.0,
+                   save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun", ortho=FALSE)
 {
   ## Runs the comparison and plots/prints/saves the resulting data.
   
@@ -376,7 +377,7 @@ if (run$NIR) {
 ##------------------------------------------------------------------------------
 ## Efron - orthogonalized
 
-if (ortho$EFRON) {
+if (oth$EFRON) {
 
   if (tau>0) tau = 41;
   
@@ -396,14 +397,14 @@ if (ortho$EFRON) {
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
-                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron-ortho")
+                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron-ortho", ortho=TRUE)
   
 }
 
 ##------------------------------------------------------------------------------
 ## Boston Housing - orthogonalized
 
-if (ortho$BH) {
+if (oth$BH) {
 
   if (tau>0) tau = 0.15
   
@@ -427,14 +428,14 @@ if (ortho$BH) {
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
-                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="BH-ortho")  
+                        save.it=save.it, print.it=TRUE, plot.it=plot.it, name="BH-ortho", ortho=TRUE)  
 
 }
 
 ##------------------------------------------------------------------------------
 ## Boston Housing with interactions
 
-if (ortho$BHI) {
+if (oth$BHI) {
 
   if (tau>0) tau=0.15
   
@@ -473,7 +474,7 @@ if (ortho$BHI) {
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                         alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
-                        save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI-ortho")
+                        save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI-ortho", ortho=TRUE)
   
 }
 

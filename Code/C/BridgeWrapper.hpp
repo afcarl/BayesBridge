@@ -89,7 +89,36 @@ double bridge_regression_stable(MatrixFrame & beta,
 				double true_tau,
 				uint burn);
 
+double bridge_regression_ortho(MatrixFrame & beta,
+			 MatrixFrame & u,
+			 MatrixFrame & omega,
+			 MatrixFrame & sig2,
+			 MatrixFrame & tau,
+			 const MatrixFrame & y,
+			 const MatrixFrame & X,
+			 double alpha,
+			 double sig2_shape,
+			 double sig2_scale,
+			 double nu_shape,
+			 double nu_rate,
+			 double true_sig2,  
+			 double true_tau , 
+			 uint burn);
 
+double bridge_regression_stable_ortho(MatrixFrame & beta,
+				MatrixFrame & lambda,
+				MatrixFrame & sig2,
+				MatrixFrame & tau,
+				const MatrixFrame & y,
+				const MatrixFrame & X,
+				double alpha,
+				double sig2_shape,
+				double sig2_scale,
+				double nu_shape,
+				double nu_rate,
+				double true_sig2,
+				double true_tau,
+				uint burn);
 
 //////////////////////////////////////////////////////////////////////
 			    // WRAPPERS //
@@ -128,7 +157,8 @@ extern "C"
 			 const int *N,
 			 const int *M,
 			 const int *burn,
-			 double *runtime);
+			 double *runtime,
+			 const bool *ortho);
 
   void bridge_reg_stable(double *betap,
 			 double *lambdap,
@@ -147,7 +177,8 @@ extern "C"
 			 const int *N,
 			 const int *M,
 			 const int *burn,
-			 double *runtime);
+			 double *runtime,
+			 const bool *ortho);
 
   void rtnorm_left(double *x, double *left, double *mu, double *sig, int *num);
 

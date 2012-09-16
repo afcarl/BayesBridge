@@ -100,6 +100,11 @@ class BridgeRegression
 		   double sig2, double tau, double alpha, 
 		   RNG& r, int niter=1);
 
+  void sample_beta_ortho(MF beta, const MF& beta_prev, 
+			 const MF& u, const MF& omega, 
+			 double sig2, double tau, double alpha, 
+			 RNG& r, int niter=1);
+
   // For sampling everything else.
   void sample_u(MF u, const MF& beta, const MF& omega, double tau, double alpha, RNG& r);
   void sample_omega(MF omega, const MF& beta, const MF& u, double tau, double alpha, RNG& r);
@@ -108,6 +113,7 @@ class BridgeRegression
 
   void sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r);
   void sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r);
+  void sample_beta_stable_ortho(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r);
 
   // Expectation Maximization.
   int EM(Matrix& beta, double sig, double tau, double alpha,
@@ -382,10 +388,9 @@ void BR::rtnorm_gibbs(double *betap,
 // could have singular precisions.  It is better to calculate beta_j based upon
 // likelihood.
 
-#ifdef ORTHOGONAL
-
-void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
+void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
 {
+
   Matrix beta_sub(P-1);
   Matrix XXbeta(1); 
 
@@ -397,7 +402,7 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
 
     for(uint j = 0; j < P; j++){
 
-     XXbeta(0) = 0.0;
+      XXbeta(0) = 0.0;
       
       // If P > 1.
       beta_sub.copy(beta, ss, 0);
@@ -423,9 +428,7 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
 
   }
 
-} // sample_beta
-
-#else //------------------------------------------------------------------------------
+}
 
 void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
 {
@@ -443,9 +446,8 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
     // rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
     rtnorm_gibbs_wrapper(beta, sig2, b, r);
   }
-} // sample_beta
 
-#endif
+} // sample_beta
 
 //--------------------------------------------------------------------
 void BR::sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_scale, RNG& r)
@@ -487,19 +489,18 @@ void BR::sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r)
 }
 
 //------------------------------------------------------------------------------
+
+void BR::sample_beta_stable_ortho(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r){
+     for(uint i=0; i<P; i++) {
+      double u = (XX(i,i) + lambda(i) * sig2 / (tau * tau));
+      double s = sqrt(sig2 / u);
+      double m = Xy(i) / u;
+      beta(i) = r.norm(m, s);
+    }
+ }
+
 void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r)
 {
-
-  #ifdef ORTHOGONAL
-
-  for(uint i=0; i<P; i++) {
-    double u = (XX(i,i) + lambda(i) * sig2 / (tau * tau));
-    double s = sqrt(sig2 / u);
-    double m = Xy(i) / u;
-    beta(i) = r.norm(m, s);
-  }
-
-  #else
 
   Matrix VInv(XX);
   for(uint i=0; i<P; i++)
@@ -524,8 +525,6 @@ void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, doubl
   // cout << "ndraw:\n" << ndraw;
 
   gemm(beta, L, ndraw, 'N', 'N', 1.0, 1.0);
-
-  #endif
 
 }
 
@@ -649,6 +648,8 @@ int BR::EM(Matrix& beta, double sig, double tau, double alpha,
 
   return total_iter;
 }
+
+//------------------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF FILE //
