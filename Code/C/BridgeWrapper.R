@@ -104,86 +104,22 @@ bridge.EM <- function(y, X,
 }
 
 ################################################################################
-                            ## BRIDGE REGRESSION ##
+                  ## BRIDGE REGRESSION MIXTURE OF TRIANGLES ##
 ################################################################################
 
-bridge.reg.know.sig2 <- function(y, X,
-                                 nsamp,
-                                 alpha=0.5,
-                                 sig2=var(lm(y~X)$residuals),
-                                 tau=1.0,
-                                 burn=500){
+bridge.reg.tri <- function(y, X,
+                           nsamp,
+                           alpha=0.5,
+                           sig2.shape=0.0, sig2.scale=0.0,
+                           nu.shape=0.5, nu.rate=0.5,
+                           sig2.true=0.0, tau.true=0.0,
+                           burn=500)
+{
     N = length(y);
     R = dim(X)[1];
     P = dim(X)[2];
     M = nsamp;
-    rt = 0;
-
-    ok = check.parameters(N, R, M, sig2, tau, alpha, 1.0, 1.0, 1.0, 1.0);
-    if (!ok) { break; }
-
-    beta  = array(0, dim=c(P, M));
-    u     = array(0, dim=c(P, M));
-    omega = array(0, dim=c(P, M));
-
-    OUT = .C("bridge_reg_know_sig2",
-             beta, u, omega,
-             as.double(y), as.double(X),
-             sig2, tau, alpha,
-             as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
-             PACKAGE="Bridge");
-
-    beta = OUT[[1]];
-    rownames(beta) = colnames(X);
-
-    output = list("beta"=beta, "u"=OUT[[2]], "w"=OUT[[3]], "runtime"=OUT[[13]]);
-}
-
-bridge.reg.know.tau <- function(y, X,
-                                nsamp,
-                                alpha=0.5,
-                                tau=1.0,
-                                sig2.shape=0.0, sig2.scale=0.0,
-                                burn=500, beta.iter=1){
-    N = length(y);
-    R = dim(X)[1];
-    P = dim(X)[2];
-    M = nsamp;
-    rt = 0;
-
-    ok = check.parameters(N, R, M, 1.0, tau, alpha, sig2.shape, sig2.scale, 1.0, 1.0);
-    if (!ok) { break; }
-
-    beta  = array(0, dim=c(P, M));
-    u     = array(0, dim=c(P, M));
-    omega = array(0, dim=c(P, M));
-    sig2  = array(0, dim=c(M));
-
-    OUT = .C("bridge_reg_know_tau",
-             beta, u, omega, sig2,
-             as.double(y), as.double(X),
-             tau, alpha,
-             sig2.shape, sig2.scale,
-             as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(beta.iter),
-             PACKAGE="Bridge");
-
-    output = list("beta"=OUT[[1]], "u"=OUT[[2]], "w"=OUT[[3]], "sig2"=OUT[[4]], "runtime"=OUT[[15]])
-    rownames(output$beta) = colnames(X);
-
-    output
-}
-
-bridge.reg <- function(y, X,
-                       nsamp,
-                       alpha=0.5,
-                       sig2.shape=0.0, sig2.scale=0.0,
-                       nu.shape=0.5, nu.rate=0.5,
-                       burn=500){
-    N = length(y);
-    R = dim(X)[1];
-    P = dim(X)[2];
-    M = nsamp;
-    rt = 0;
+    rtime = 0;
 
     ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
@@ -194,14 +130,14 @@ bridge.reg <- function(y, X,
     sig2  = array(0, dim=c(M));
     tau   = array(0, dim=c(M));
 
-    OUT <- .C("bridge_regression_all",
+    OUT <- .C("bridge_regression",
               beta, u, omega, sig2, tau,
               as.double(y), as.double(X),
               alpha,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
-              true.sig2=0.0, true.tau=0.0,
-              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
+              sig2.true, tau.true,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rtime,
               PACKAGE="Bridge");
 
     output <- list("beta"=OUT[[1]], "u"=OUT[[2]], "w"=OUT[[3]], "sig2"=OUT[[4]], "tau"=OUT[[5]],
@@ -211,6 +147,91 @@ bridge.reg <- function(y, X,
 
     output
 }
+
+################################################################################
+               ## BRIDGE REGRESSION MIXTURE OF NORMAL KERNELS ##
+################################################################################
+
+bridge.reg.stb <- function(y, X,
+                           nsamp,
+                           alpha=0.5,
+                           sig2.shape=0.0, sig2.scale=0.0,
+                           nu.shape=2.0, nu.rate=2.0,
+                           sig2.true=0.0, tau.true=0.0,
+                           burn=500)
+{
+    N = length(y);
+    R = dim(X)[1];
+    P = dim(X)[2];
+    M = nsamp;
+    rt = 0;
+    
+    ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    if (!ok) { break; }
+
+    beta   = array(0, dim=c(P, M));
+    lambda = array(0, dim=c(P, M));
+    sig2  = array(0, dim=c(M));
+    tau   = array(0, dim=c(M));
+
+    OUT <- .C("bridge_reg_stable",
+              beta, lambda, sig2, tau,
+              as.double(y), as.double(X),
+              alpha,
+              sig2.shape, sig2.scale,
+              nu.shape, nu.rate,
+              sig2.true, tau.true,
+              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
+              PACKAGE="Bridge");
+
+    output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[18]])
+    rownames(output$beta) = colnames(X);
+
+    output
+}
+
+################################################################################
+                               ## WRAP TO BOTH ##
+################################################################################
+
+bridge.reg <- function(y, X,
+                       nsamp,
+                       alpha=0.5,
+                       sig2.shape=0.0, sig2.scale=0.0,
+                       nu.shape=2.0, nu.rate=2.0,
+                       sig2.true=0.0, tau.true=0.0,
+                       burn=500, method="triangle")
+{
+  out = NULL
+  
+  if (method=="triangle") {
+    out = bridge.reg.tri(y, X,
+      nsamp,
+      alpha=0.5,
+      sig2.shape=0.0, sig2.scale=0.0,
+      nu.shape=0.5, nu.rate=0.5,
+      sig2.true=0.0, tau.true=0.0,
+      burn=500)
+  }
+  else if (method=="stable") {
+    out = bridge.reg.stb(y, X,
+      nsamp,
+      alpha=0.5,
+      sig2.shape=0.0, sig2.scale=0.0,
+      nu.shape=0.5, nu.rate=0.5,
+      sig2.true=0.0, tau.true=0.0,
+      burn=500)
+  }
+  else {
+    print("Unrecognized method.  Use \"triangles\" or \"stable\".");
+  }
+
+  out
+}
+
+################################################################################
+                             ## TRUNCATED NORMAL ##
+################################################################################
 
 ## Draw truncated normal
 ##------------------------------------------------------------------------------
@@ -315,74 +336,4 @@ rtnorm <- function(num=1, mu=0.0, sig=1.0, left=-Inf, right=Inf)
   }
 
   x
-}
-
-##------------------------------------------------------------------------------
-
-bridge.reg.know.tau.stable <- function(y, X,
-                                       nsamp,
-                                       alpha=0.5,
-                                       tau=1.0,
-                                       sig2.shape=0.0, sig2.scale=0.0,
-                                       burn=500){
-    N = length(y);
-    R = dim(X)[1];
-    P = dim(X)[2];
-    M = nsamp;
-    rt = 0;
-    
-    ok = check.parameters(N, R, M, 1.0, tau, alpha, sig2.shape, sig2.scale, 1.0, 1.0);
-    if (!ok) { break; }
-
-    beta   = array(0, dim=c(P, M));
-    lambda = array(0, dim=c(P, M));
-    sig2  = array(0, dim=c(M));
-
-    OUT = .C("bridge_reg_know_tau_stable",
-             beta, lambda, sig2,
-             as.double(y), as.double(X),
-             tau, alpha,
-             sig2.shape, sig2.scale,
-             as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
-             PACKAGE="Bridge");
-
-    output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "runtime"=OUT[[14]])
-    rownames(output$beta) = colnames(X);
-
-    output
-}
-
-bridge.reg.stable <- function(y, X,
-                              nsamp,
-                              alpha=0.5,
-                              sig2.shape=0.0, sig2.scale=0.0,
-                              nu.shape=2.0, nu.rate=1/2,
-                              burn=500){
-    N = length(y);
-    R = dim(X)[1];
-    P = dim(X)[2];
-    M = nsamp;
-    rt = 0;
-    
-    ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
-    if (!ok) { break; }
-
-    beta   = array(0, dim=c(P, M));
-    lambda = array(0, dim=c(P, M));
-    sig2  = array(0, dim=c(M));
-    tau   = array(0, dim=c(M));
-
-    OUT <- .C("bridge_reg_stable",
-              beta, lambda, sig2, tau,
-              as.double(y), as.double(X),
-              alpha,
-              sig2.shape, sig2.scale,
-              nu.shape, nu.rate,
-              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt,
-              PACKAGE="Bridge");
-
-    output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[16]])
-    rownames(output$beta) = colnames(X);
-
-    output
 }

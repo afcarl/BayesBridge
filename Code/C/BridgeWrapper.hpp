@@ -59,55 +59,6 @@ int EM(Matrix & beta, MatrixFrame &y, MatrixFrame &X,
 //////////////////////////////////////////////////////////////////////
 
 double bridge_regression(MatrixFrame & beta,
-		       MatrixFrame & u,
-		       MatrixFrame & omega,
-		       const MatrixFrame & y,
-		       const MatrixFrame & X,
-		       double sig2_known,
-		       double tau_known,
-		       double alpha,
-		       uint burn_in);
-
-double bridge_regression(MatrixFrame & beta,
-		       MatrixFrame & u,
-		       MatrixFrame & omega,
-		       MatrixFrame & sig2,
-		       const MatrixFrame & y,
-		       const MatrixFrame & X,
-		       double tau,
-		       double alpha,
-		       double sig2_shape,
-		       double sig2_scale,
-		       uint burn_in,
-		       int beta_iter=1);
-
-double bridge_regression(MatrixFrame & beta,
-		       MatrixFrame & u,
-		       MatrixFrame & omega,
-		       MatrixFrame & sig2,
-		       MatrixFrame & tau,
-		       const MatrixFrame & y,
-		       const MatrixFrame & X,
-		       double alpha,
-		       double sig2_shape,
-		       double sig2_scale,
-		       double nu_shape,
-		       double nu_rate,
-		       uint burn_in);
-
-void bridge_regression_test(MatrixFrame & beta,
-			    MatrixFrame & u,
-			    MatrixFrame & omega,
-			    MatrixFrame & tau,
-			    const MatrixFrame & y,
-			    const MatrixFrame & X,
-			    double sig2_known,
-			    double alpha,
-			    double nu_shape,
-			    double nu_rate,
-			    uint burn_in);
-
-double bridge_regression(MatrixFrame & beta,
 			 MatrixFrame & u,
 			 MatrixFrame & omega,
 			 MatrixFrame & sig2,
@@ -124,17 +75,6 @@ double bridge_regression(MatrixFrame & beta,
 			 uint burn);
 
 double bridge_regression_stable(MatrixFrame & beta,
-			      MatrixFrame & lambda,
-			      MatrixFrame & sig2,
-			      const MatrixFrame & y,
-			      const MatrixFrame & X,
-			      double tau_known,
-			      double alpha,
-			      double sig2_shape,
-			      double sig2_scale,
-			      uint burn_in);
-
-double bridge_regression_stable(MatrixFrame & beta,
 				MatrixFrame & lambda,
 				MatrixFrame & sig2,
 				MatrixFrame & tau,
@@ -145,7 +85,11 @@ double bridge_regression_stable(MatrixFrame & beta,
 				double sig2_scale,
 				double nu_shape,
 				double nu_rate,
+				double true_sig2,
+				double true_tau,
 				uint burn);
+
+
 
 //////////////////////////////////////////////////////////////////////
 			    // WRAPPERS //
@@ -166,58 +110,28 @@ extern "C"
 		       int *max_iter,
 		 const bool *use_cg);
 
-  void bridge_reg_know_sig2(double *beta,
-			    double *up,
-			    double *omegap,
-			    const double *y,
-			    const double *X,
-			    const double *sig2_known,
-			    const double *tau_known,
-			    const double *alpha,
-			    const int *P,
-			    const int *N,
-			    const int *M,
-			    const int *burn_in,
-			    double *runtime);
-
-  void bridge_reg_know_tau(double *beta,
-			   double *up,
-			   double *omegap,
-  			   double *sig2,
-  			   const double *y,
-  			   const double *X,
-  			   const double *tau_known,
-  			   const double *alpha,
-  			   const double *sig2_shape,
-  			   const double *sig2_scale,
-  			   const int *P,
-  			   const int *N,
-  			   const int *M,
-  			   const int *burn_in,
-			   double *runtime,
-			   const int *beta_iter);
-
-  void bridge_regression(double *beta,
+  void bridge_regression(double *betap,
 			 double *up,
 			 double *omegap,
-  			 double *sig2,
-  			 double *tau,
-  			 const double *y,
-  			 const double *X,
-  			 const double *alpha,
-  			 const double *sig2_shape,
-  			 const double *sig2_scale,
-  			 const double *nu_shape,
-  			 const double *nu_rate,
-  			 const int *P,
-  			 const int *N,
-  			 const int *M,
-  			 const int *burn_in,
+			 double *sig2p,
+			 double *taup,
+			 const double *yp,
+			 const double *Xp,
+			 const double *alpha,
+			 const double *sig2_shape,
+			 const double *sig2_scale,
+			 const double *nu_shape,
+			 const double *nu_rate,
+			 const double *true_sig2,
+			 const double *true_tau,
+			 const int *P,
+			 const int *N,
+			 const int *M,
+			 const int *burn,
 			 double *runtime);
 
-  void bridge_regression_all(double *betap,
-			 double *up,
-			 double *omegap,
+  void bridge_reg_stable(double *betap,
+			 double *lambdap,
 			 double *sig2p,
 			 double *taup,
 			 const double *yp,
@@ -239,38 +153,6 @@ extern "C"
 
   void rtnorm_both(double *x, double *left, double* right, double *mu, double *sig, int *num);
 
-  void bridge_reg_know_tau_stable(double *betap,
-				  double *lambdap,
-				  double *sig2p,
-				  const double *yp,
-				  const double *Xp,
-				  const double *tau_known,
-				  const double *alpha,
-				  const double *sig2_shape,
-				  const double *sig2_scale,
-				  const int *P,
-				  const int *N,
-				  const int *M,
-				  const int *burn_in,
-				  double *runtime);
-
-  void bridge_reg_stable(double *betap,
-			 double *lambdap,
-			 double *sig2p,
-			 double *taup,
-			 const double *yp,
-			 const double *Xp,
-			 const double *alpha,
-			 const double *sig2_shape,
-			 const double *sig2_scale,
-			 const double *nu_shape,
-			 const double *nu_rate,
-			 const int *P,
-			 const int *N,
-			 const int *M,
-			 const int *burn,
-			 double *runtime);
-
 }
 
 #endif
@@ -278,4 +160,5 @@ extern "C"
 //////////////////////////////////////////////////////////////////////
 			  // END OF CODE //
 //////////////////////////////////////////////////////////////////////
+
 

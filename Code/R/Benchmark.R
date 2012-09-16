@@ -25,9 +25,9 @@ sum.stat <- function(gbs)
                                   ## Setup ##
 ################################################################################
 
-run <- list("EFRON" = TRUE , # Efron's diabetes data
-            "BH"    = TRUE , # Boston Housing
-            "BHI"   = TRUE , # Boston Housing with interactions
+run <- list("EFRON" = TRUE, # Efron's diabetes data
+            "BH"    = TRUE, # Boston Housing
+            "BHI"   = TRUE, # Boston Housing with interactions
             "NIR"   = FALSE) # NIR
 
 ## Ortogonalizing matrices by QR.
@@ -35,30 +35,24 @@ ortho <- list("EFRON" = FALSE,
               "BH"    = FALSE,
               "BHI"   = FALSE)
 
-methods = c("rotate", "norotate", "package")
-method = "rotate"
+## RUN INFO
+nsamp = 10000
+burn = 2000
+alpha = 0.5
+ntrials = 1
+tau = 100 ## Set to <= 0 for unknown tau.
 
-known.tau = FALSE
-
-save.it  = TRUE ## Write output to file
+save.it  = FALSE ## Write output to file
 plot.it  = FALSE ## Plot histograms
-print.it = FALSE ## Print summary.
+print.it = TRUE  ## Print summary.
 
 ################################################################################
                            ## Load .so or package ##
 ################################################################################
 
-if (method=="rotate") {
-  if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
-  if (is.loaded("BridgeNoRotate.so")) dyn.unload("BridgeNoRotate.so");
-  if (!is.loaded("Bridge.so")) dyn.load("Bridge.so");
-  source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
-} else if (method=="norotate") {
-  if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
-  if (is.loaded("BridgeNoRotate.so")) dyn.unload("BridgeNoRotate.so");
-  if (!is.loaded("BridgeNoRotate.so")) dyn.load("BridgeNoRotate.so");
-  source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
-}
+if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
+if (!is.loaded("Bridge.so")) dyn.load("Bridge.so");
+source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
 
 ################################################################################
                      ## Make sure everything is working ##
@@ -93,14 +87,11 @@ if (FALSE) {
 
   nsamp = 10000
 
-  gb1 = bridge.reg.know.sig2(y, X, nsamp, 0.5, 2500.0, 100.0, 500);
-  gb3 = bridge.reg(y, X, nsamp, 0.5, 0.0, 0.0, 0.5, 0.5, 500);
+  gb1 = bridge.reg.triangle(y, X, nsamp, 0.5, tau=41, burn=500)
+  gb3 = bridge.reg.triangle(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, burn=500)
 
-  gb2 = bridge.reg.know.tau(y, X, nsamp, 0.5, 100.0, 0.0, 0.0, 500, 20);
-  gb2 = bridge.reg.know.tau.R(y, X, nsamp/2, alpha=0.5, tau=100.0, burn=100, verbose=500);
-  gb4 = bridge.reg.know.tau.stable(y, X, nsamp, 0.5, 100.0, 0.0, 0.0, 500);
-
-  gb5 = bridge.reg.stable(y, X, nsamp, 0.5, 0.0, 0.0, 2, 1/2, 500)
+  gb2 = bridge.reg.stable(y, X, nsamp, 0.5, tau=41, burn=500)
+  gb4 = bridge.reg.stable(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, burn=500)
 
   sstat.2 = sum.stat(gb2);
   sstat.4 = sum.stat(gb4);
@@ -108,9 +99,9 @@ if (FALSE) {
   ## Make sure things look right.
   for(i in 1:10){
     par(mfrow=c(1,2));
-    hist(gb2$beta[i,], breaks=100, prob=TRUE);
+    hist(gb1$beta[i,], breaks=100, prob=TRUE);
     ## hist(gb2$beta[,i], breaks=100, prob=TRUE);
-    hist(gb4$beta[i,], breaks=100, prob=TRUE);
+    hist(gb3$beta[i,], breaks=100, prob=TRUE);
     readline("Press Enter...");
   }
 
@@ -121,7 +112,9 @@ if (FALSE) {
 ################################################################################
 
 compare.it <- function(y, X, nsamp=10000,
-                       alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=0.5,
+                       alpha=0.5,
+                       sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
+                       tau=0.0,
                        burn=0, ntrials=1)
 {
   ## Returns a list of summary statistics, the last Gibbs MCMC, and a
@@ -136,13 +129,8 @@ compare.it <- function(y, X, nsamp=10000,
 
   for (i in 1:ntrials){
     
-    if (!known.tau) { ## Known tau, unknown sigma.
-      gb.tri = bridge.reg.know.tau(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn, 1);
-      gb.stb = bridge.reg.know.tau.stable(y, X, nsamp, alpha, tau, sig2.shape, sig2.scale, burn);
-    } else {         ## Unknown tau, sigma.
-      gb.tri = bridge.reg(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn);
-      gb.stb = bridge.reg.stable(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn)
-    }
+    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn);
+    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn)
     
     sstat.tri = sum.stat(gb.tri);
     sstat.stb = sum.stat(gb.stb);
@@ -169,6 +157,8 @@ compare.it <- function(y, X, nsamp=10000,
 
   OUT
 }
+
+##------------------------------------------------------------------------------
 
 plot.info <- function(info, P=nrow(info$tri.gb$beta))
 {
@@ -204,15 +194,17 @@ plot.info <- function(info, P=nrow(info$tri.gb$beta))
   }
 }
 
+##------------------------------------------------------------------------------
+
 run.it <- function(y, X, nsamp=1000,  burn=100, 
-                   alpha=0.5, tau=100, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=0.5,
+                   alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,  tau=0.0,
                    ntrials=1, save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun")
 {
   ## Runs the comparison and plots/prints/saves the resulting data.
   
   info = compare.it(y, X, nsamp=nsamp,
-    alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, nu.shape, nu.rate, burn=burn,
-    ntrials=ntrials)
+    alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, nu.shape, nu.rate, tau=tau,
+    burn=burn, ntrials=ntrials)
 
   ## Make sure things look right.
   if (plot.it) {
@@ -247,12 +239,7 @@ run.it <- function(y, X, nsamp=1000,  burn=100,
 
 if (run$EFRON) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn  = 2000
-  alpha = 0.5
-  tau   = 41
-  ntrials = 10
+  if (tau>0) tau = 41
   
   ## Load data.
   load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
@@ -267,8 +254,8 @@ if (run$EFRON) {
   for(i in 1:442){ X[i,] = X[i,] - mX; }
 
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
-                        save.it=save.it, print.it=print.it, plot.it=plot.it, name="efron")
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
+                 save.it=save.it, print.it=print.it, plot.it=plot.it, name="efron")
 
 }
 
@@ -277,12 +264,7 @@ if (run$EFRON) {
 
 if (run$BH) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn = 2000
-  alpha = 0.5
-  tau   = 0.15
-  ntrials = 10
+  if (tau>0) tau   = 0.15
   
   data("BostonHousing", package="mlbench")
 
@@ -301,7 +283,7 @@ if (run$BH) {
   cnames = colnames(X);
 
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                        alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                         save.it=save.it, print.it=print.it, plot.it=plot.it, name="BH")  
 
 }
@@ -311,12 +293,7 @@ if (run$BH) {
 
 if (run$BHI) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn = 2000
-  alpha = 0.5
-  tau   = 100
-  ntrials = 10
+  if (tau>0) tau = 0.15
   
   data("BostonHousing", package="mlbench")
 
@@ -350,7 +327,7 @@ if (run$BHI) {
   cnames = colnames(X);
 
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
-                 alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI")
   
 }
@@ -387,7 +364,7 @@ if (run$NIR) {
   X = as.matrix(X);
 
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
-                 alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=TRUE, plot.it=plot.it, name="NIR")
 
 }
@@ -401,12 +378,7 @@ if (run$NIR) {
 
 if (ortho$EFRON) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn  = 1000
-  alpha = 0.5
-  tau   = 100
-  ntrials = 1
+  if (tau>0) tau = 41;
   
   ## Load data.
   load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
@@ -423,7 +395,7 @@ if (ortho$EFRON) {
   colnames(Q) = c(1:ncol(Q))
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                        alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                         save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron-ortho")
   
 }
@@ -433,12 +405,7 @@ if (ortho$EFRON) {
 
 if (ortho$BH) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn = 1000
-  alpha = 0.5
-  tau   = 100
-  ntrials = 1
+  if (tau>0) tau = 0.15
   
   data("BostonHousing", package="mlbench")
 
@@ -459,7 +426,7 @@ if (ortho$BH) {
   colnames(Q) = c(1:ncol(Q))
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                        alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                         save.it=save.it, print.it=TRUE, plot.it=plot.it, name="BH-ortho")  
 
 }
@@ -469,12 +436,7 @@ if (ortho$BH) {
 
 if (ortho$BHI) {
 
-  ## RUN INFO
-  nsamp = 10000
-  burn = 1000
-  alpha = 0.5
-  tau   = 100
-  ntrials = 1
+  if (tau>0) tau=0.15
   
   data("BostonHousing", package="mlbench")
 
@@ -510,7 +472,7 @@ if (ortho$BHI) {
   colnames(Q) = c(1:ncol(Q))
 
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
-                        alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials,
+                        alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                         save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI-ortho")
   
 }
@@ -522,10 +484,10 @@ if (ortho$BHI) {
 if (FALSE) {
 
   ## Known Tau
-  temp.gb.tri = bridge.reg.know.tau(y, X, nsamp=nsamp,
-    alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, burn=burn, 1);
-  temp.gb.stb = bridge.reg.know.tau.stable(y, X, nsamp=nsamp,
-    alpha=alpha, tau=tau, sig2.shape=0.0, sig2.scale=0.0, burn=burn);
+  temp.gb.tri = bridge.reg.tri(y, X, nsamp=nsamp,
+    alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, tau=tau, burn=burn);
+  temp.gb.stb = bridge.reg.stb(y, X, nsamp=nsamp,
+    alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, tau=tau, burn=burn);
 
   cnames=colnames(X)
   
