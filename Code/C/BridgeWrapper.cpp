@@ -1,3 +1,10 @@
+#ifdef USE_R
+#include "R.h"
+#include "Rmath.h"
+#include <R_ext/Utils.h>
+#include <R_ext/PrtUtil.h>
+#endif
+
 #include "BridgeWrapper.hpp"
 #include <time.h>
 #include <iostream>
@@ -6,12 +13,6 @@
 
 using std::cout;
 using std::cerr;
-
-#ifdef USE_R
-#include "R.h"
-#include "Rmath.h"
-#include <R_ext/Utils.h>
-#endif
 
 // #include <algorithm>
 

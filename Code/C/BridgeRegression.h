@@ -42,6 +42,10 @@
 #include <Eigen/Core>
 #include <Eigen/SVD>
 
+#ifdef USE_R
+#include <R_ext/Utils.h>
+#endif
+
 using std::cout;
 using std::cerr;
 
