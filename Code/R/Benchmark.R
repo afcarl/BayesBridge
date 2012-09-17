@@ -31,18 +31,18 @@ run <- list("EFRON" = TRUE, # Efron's diabetes data
             "NIR"   = FALSE) # NIR
 
 ## Ortogonalizing matrices by QR.
-oth <- list("EFRON" = FALSE,
-            "BH"    = FALSE,
-            "BHI"   = FALSE)
+oth <- list("EFRON" = TRUE,
+            "BH"    = TRUE,
+            "BHI"   = TRUE)
 
 ## RUN INFO
 nsamp = 10000
 burn = 2000
 alpha = 0.5
-ntrials = 1
+ntrials = 10
 tau = 0 ## Set to <= 0 for unknown tau.
 
-save.it  = FALSE ## Write output to file
+save.it  = TRUE ## Write output to file
 plot.it  = FALSE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
@@ -50,9 +50,14 @@ print.it = TRUE  ## Print summary.
                            ## Load .so or package ##
 ################################################################################
 
-if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
-if (!is.loaded("Bridge.so")) dyn.load("Bridge.so");
-source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
+use.library=TRUE
+if (use.library) {
+  library("BayesBridge", lib.loc="~/RPackage/BayesBridge/Code/BBPackage/Test/");
+} else {
+  if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
+  if (!is.loaded("Bridge.so")) dyn.load("Bridge.so");
+  source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
+}
 
 ################################################################################
                      ## Make sure everything is working ##
@@ -129,8 +134,10 @@ compare.it <- function(y, X, nsamp=10000,
 
   for (i in 1:ntrials){
     
-    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn, ortho);
-    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, 0.0, tau, burn, ortho)
+    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+      0.0, tau, burn, ortho=ortho);
+    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+      0.0, tau, burn, ortho=ortho)
     
     sstat.tri = sum.stat(gb.tri);
     sstat.stb = sum.stat(gb.stb);
@@ -205,7 +212,7 @@ run.it <- function(y, X, nsamp=1000,  burn=100,
   
   info = compare.it(y, X, nsamp=nsamp,
     alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, nu.shape, nu.rate, tau=tau,
-    burn=burn, ntrials=ntrials)
+    burn=burn, ntrials=ntrials, ortho=ortho)
 
   ## Make sure things look right.
   if (plot.it) {

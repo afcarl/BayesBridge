@@ -6,25 +6,27 @@
 int main(int argc, char** argv)
 {
   // The data.
-  // Matrix X; X.read("X.lars", true);
-  // Matrix y; y.read("Y.lars", true);
+  Matrix X; X.read("X.lars", true);
+  // Matrix X; X.read("Q.lars", true);
+  Matrix y; y.read("Y.lars", true);
 
-  Matrix X; X.read("X.nir", true);
-  Matrix y; y.read("y.nir", true);  
+  // Matrix X; X.read("X.nir", true);
+  // Matrix y; y.read("y.nir", true);  
 
   // // True data.
   // Matrix beta_data; beta_data.read("beta.data", true);
 
-  uint M = 10000;
+  uint M = 100000;
   uint P = X.cols();
+  uint N = X.rows();
 
   double alpha = 0.5;
 
   // Least squares.
   Matrix XX(X, X, 'T', 'N');
   Matrix ls(X, y, 'T', 'N');
-  // symsolve(XX, ls);
-  // cout << "LS:\n" << ls;
+  symsolve(XX, ls);
+  cout << "LS:\n" << ls;
 
   Matrix beta(P      , (uint)1, M);
 
@@ -36,9 +38,13 @@ int main(int argc, char** argv)
 
   //bridge_regression_test(beta, u, omega, tau, y, X, 2500.0, alpha, 0.5, 0.5, 500);
 
-  bridge_regression(beta, u, omega,
-		    y, X,
-		    2500.0, 1.0, alpha, 100);
+  // bridge_regression(beta, u, omega, y, X, 2500.0, 1.0, alpha, 100);
+  bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 41, 100);
+  
+  Matrix lambda(N, (uint)1, M);
+
+  // bridge_regression_stable(beta, lambda, sig2, y, X, 1.0, alpha, 0.0, 0.0, 100);
+  // bridge_regression_stable(beta, lambda, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 100);
 
   printf("Regression done.  Write out.\n");
 
