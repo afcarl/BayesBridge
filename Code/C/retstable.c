@@ -1,4 +1,6 @@
 
+// Taken from copula package.
+
 // #include <Rmath.h>
 #include <math.h>
 #include <stdio.h>
@@ -139,13 +141,22 @@ double retstable_LD(double h, double alpha, RNG& r)
     double w3 = xi*M_PI;
     double X, c, E;
 
+    #ifdef USE_R
+    int outiter = 0;
+    int initer  = 0;
+    #endif
+
     do {
       double U, z, Z;
+
+      #ifdef USE_R
+      if (outiter++ % 1000 == 0) R_CheckUserInterrupt();
+      #endif
 
       do {
 
       #ifdef USE_R
-      R_CheckUserInterrupt();
+	if (initer++ % 1000 == 0) R_CheckUserInterrupt();
       #endif
 
 	// MYMY
