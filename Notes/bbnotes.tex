@@ -1,0 +1,737 @@
+\documentclass{article}
+
+\input{commands}
+\usepackage{parskip}
+\usepackage{natbib}
+
+% Page Layout
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8in}
+%\parindent 0in
+%\parskip 12pt
+
+% Set Fancy Style
+%\pagestyle{fancy}
+
+%\lhead{Left Header}
+%\rhead{Right Header}
+
+\begin{document}
+
+% Change Font and Spacing
+\large % change the font size to 12pt
+% \linespread{1.1} % change the line spacing
+
+% Set the counter
+\setcounter{section}{0}
+
+\section{Regarding the mixture of Betas}
+
+This shows why knowing calculus well is important.
+
+Suppose you have a mixture of Betas representation
+\begin{align*}
+f(x) 
+& = \int_0^\infty \frac{1}{y} \Big( 1 - \frac{x}{ky} \Big)^{k-1}_+ dG(y), \; k > 1; \\
+& = \int_0^\infty \frac{1}{y} \exp(-x/y) dG(y), \; k = \infty.
+\end{align*}
+Then you can solve for $G$ or $g = G'$ in terms of $f$, which tells you how to
+construct a mixture.  Note that the support of $y$ $(0, \infty)$.  The mixture
+$p(x|y)$ is $\beta(1, k)$ with support on $(0, ky)$.
+
+Focusing on the finite $k$ case.  Since the $(\cdot)_+$ function is zero for $y
+< x/k$ we know that the support is on $y > x/k$.
+\[
+f(x) = \int_{x/k}^\infty y^{-1}  \Big( 1 - \frac{x}{ky} \Big)^{k-1}_+ g(y) dy.
+\]
+I have gone ahead and assumed that $G$ is differentiable, or differentiable
+almost everywhere or whatever is required.
+
+Something we need to remind ourselves.  If 
+\[
+f(x) = \int_0^x g(x,y) dy
+\]
+then
+\[
+f'(x) = g(x,x) + \int_0^x g_x(x,y) dy
+\]
+given that $g$ is differentiable (implying continuity) and we have some DCT to
+take the derivative inside the integral.  Impressionistically,
+\[
+\frac{1}{\ep} \Big( \int_0^{x+\ep} g(x+\ep, y) dy - \int_0^{x} g(x, y) dy \Big)
+= \frac{1}{\ep} \int_x^{x+\ep} g(x+\ep, y) dy
++ \int_0^x \frac{g(x+\ep, y) - g(x,y)}{\ep} dy.
+\]
+Using the continuity of $g$ and some sort of DCT we can take the limit and get
+our claim.
+
+When $k=1$, we don't even have to worry about that.  In that case,
+\[
+f(x) = \int_x^\infty \frac{1}{y} g(y) dy.
+\]
+Then \( f'(x) = - g(x) / x \), which becomes
+\[
+g(x) = -x f'(x).
+\]
+Integrating to get $G$ and using integration by parts for $f$ we have
+\[
+\int_0^x g(z) dz = \int_0^x -z f'(z) dz = -z f(z) \mid_{0}^x + \int_0^x f(z) dz.
+\]
+Thus
+\[
+G(x) = -x f(x) + F(x).
+\]
+
+When $k=2$ we have
+\[
+f(x) = \int_{x/2}^\infty \frac{1}{y} \Big(1 - \frac{x}{2y}\Big)_+ g(y) dy.
+\]
+Differentiating we have
+\[
+f'(x) = 0 + \int_{x/2}^\infty \frac{1}{y} \Big( \frac{-1}{2y} \Big) g(y) dy.
+\]
+And differentiating again
+\[
+f''(x) = \frac{2}{x^2} g(x/2),
+\]
+which becomes (letting $\bar g(x) = g(x/2)$)
+\[
+\bar g(x) = \frac{x^2}{2} f''(x).
+\]
+Now integrating and then integrating by parts we have
+\begin{align*}
+\int_0^x \bar g(z) dz & = \int_0^x \frac{z^2}{2} f''(z) dz \\
+& = \frac{z^2}{2} f'(z) \mid_{0}^x - \int_0^x z f'(z) dz \\
+& = \frac{-x^2}{2} f'(x) - z f(z) \mid_{0}^x + \int_0^x f(z) dz.
+\end{align*}
+Hence
+\[
+G(x/2) = F(x) - x F'(x) + \frac{x^2}{2} F''(x).
+\]
+We know that $G$ is a CDF because $F$ is going to go to unity and the
+derivatives will vanish (assuming that they do and at a sufficiently fast rate).
+
+By our $k$-monotone condition, I think we know that we can take this many
+derivatives and that they are decaying as fast as we want them to.
+
+In general, the $k-1$st derivative of a $k$-monotone function is going to be
+(think about differentiaing under the integral)
+\[
+\int_0^\infty \frac{(k-1)!}{(ky)^{k-1}} \bbI\{ky > x > 0\} \frac{1}{y} g(y) dy
+=
+\int_{x/k}^\infty (-1)^{k-1} \frac{(k-1)!}{(ky)^{k-1}} \frac{1}{y} g(y) dy.
+\]
+Thus the $k$th derivative is
+\[
+f^{(k)}(x) = (-1) (-1)^{k-1} \frac{(k-1)!}{x^{k-1}} \frac{k}{x} g(x/k)
+\]
+from which we see that
+\[
+f^{(k)}(x) = (-1)^k \frac{k!}{x^k} g(x/k)
+\]
+and hence
+\[
+g(x/k) = (-1)^k \frac{x^k}{k!} f^{(k)}(x).
+\]
+Doing the integration by parts trick will get us the CDF for $G$, which can be
+described by
+\[
+G(x/k) = \sum_{i=0}^k \frac{(-1)^i}{i!} x^i F^{(i)} (x).
+\]
+
+\section{Expectation Maximization}
+
+Again, I need to remind myself about the EM algorithm.  It is worth reading
+\cite{dempster-etal-1977}.  They motivate their work using exponential families.
+That is actually more difficult to understand than the auxiliary variable setup
+where you have data and an auxilliary variable.
+
+For the sake of brevity we simply review the simple version.  You have data $y$,
+unknown parameters $\theta$, and an auxiliary variable $\omega$.  You want to
+find the maximum likelihood.  By probability calculus
+\begin{displaymath}
+\label{eqn:marginal}
+p(y|\theta) = \frac{p(y,\omega | \theta)}{p(\omega | y, \theta)}.
+\end{displaymath}
+Taking the logarithm of both sides, which preserves the mode, yields
+\[
+\ln p(y | \theta) = \ln p(y,\omega | \theta) - \ln p(\omega | y, \theta).
+\]
+The key to everything is in the last term.  If we take the expectation with
+respect to $p(\omega | y, \theta^p)$, then
+\[
+H(\theta | \theta^p) = \bbE [ \ln p(\omega | y, \theta) | y, \theta^p ]
+\]
+has its maximum at $\theta = \theta^p$.  If we apply this expectation to both
+sides we have
+\[
+\ln p(y | \theta) = Q(\theta | \theta^p) - H(\theta | \theta^p)
+\]
+where
+\[
+Q(\theta | \theta^p) = \bbE[ \ln p(y,\omega | \theta) | y, \theta^p ]
+\]
+Thus if we are at $\theta^p$ we can chose any $\theta$ so that $Q(\theta |
+\theta^p) > Q(\theta^p | \theta^p)$ to increase the value of $\ln p(y | theta)$.
+We can maximize $Q$ given $\theta^p$ to increase the log-likelihood as much as
+possible in that one step.  In this way one can construct a sequence $\theta^1,
+\theta^2, \ldots$ that coverge to $\theta^*$ the maximum likelihood.  The
+function $Q$ is called the complete data log-likelihood because $p(y, \omega |
+\theta)$ is the likelihood for the ``complete'' observation $(y, \omega)$, which
+is only ``partially'' observed when one aquires $y$.
+
+The same applies for finding the posterior mode, except that now we start with
+\[
+p(\theta | y) = \frac{p(\theta, \omega | y)}{p(\omega | \theta, y)}.
+\]
+The $H$ term is idential and thus possesses the same property, but now we have
+\[
+Q(\theta | \theta^p) = \bbE[ \ln p(\theta, \omega | y) | \theta^p, y ].
+\]
+
+\section{Bridge Regression with triangles}
+
+Regarding bridge regression by augmentation: the prior can be prepresnted as
+\[
+p(\beta) = \int_0^\infty p(\beta | \omega) p(\omega) d \omega
+\]
+where $p(\beta | \omega)$ is 
+\[
+\propto \frac{1}{2} \frac{1}{\omega} \Big( 1 - \frac{|\beta|}{k\omega}
+\Big)^{k-1}_+.
+\]
+This density has support on $(-k\omega, k \omega)$ in contrast to the case above
+where we looked at support on $(0, k \omega)$.
+
+We need two quantities:
+\[
+p(\beta, \omega | y) = \frac{p(y|\beta) p(\beta | \omega) p(\omega)}{p(y)}.
+\]
+Taking the logarithm we have
+\[
+\ln p(y | \beta) + \ln p(\beta | \omega) + \ln p(\omega) - \ln p(y).
+\]
+Only the first two terms will vary with $\beta$ after taking the expectation, thus
+\[
+Q(\beta | \beta^p) = \underbrace{\ln p(y | \beta) + \bbE[\ln p(\beta | \omega) |
+  \beta^p, y]}_{\mcQ} + K
+\]
+where the expectation is taken with respect to
+\[
+p(\omega | \beta^p, y) \propto p(\beta^p | \omega) p(\omega).
+\]
+
+I believe Polson is saying that we will be using the $\alpha$-stable prior for
+each coordinate of $\beta$.  Thus the prior would be
+\[
+\propto \prod_{j=1}^P \exp(-|\beta_j|^\alpha).
+\]
+Thus we need an auxiliary variable for each coordinate.  This is in contrast to
+the case where the prior is
+\[
+\propto \exp (-|\beta|^\alpha)
+\]
+which is spherically symmetric.  I think one may be able to proceed in this
+fashion actually.  In the first case,
+\[
+p(\beta | \omega) = \sum_{j=1}^P \frac{1}{\omega_j} \Big(1 -
+\frac{|\beta_j|}{k\omega_j}\Big)^{k-1}_+.
+\]
+In the second case,
+\[
+p(\beta | \omega) \propto \frac{1}{\omega} \Big(1 -
+\frac{|\beta|}{k\omega}\Big)_+^{k-1}.
+\]
+I need to check what the constant of proportionality is here.  I think there is
+a chance it does not depend on $\omega$.  (Do the change $\gamma = \beta /
+k\omega$.  Then use polar coordinates.  I think you get a beta distribution in
+the radius and there are no $\omega$s left.)  Though come to think of it, maybe
+this prior is not what you want.  You shrink towards zero, but the spherical
+symmetry won't favor one variable over another.
+
+In either event $p(\beta | \omega)$ is unimodal, though the level sets have
+different symmetries.
+
+To derive the density $p(\omega | \alpha)$ for the mixture when $k=2$ we have
+$f(x) \propto \exp(-x^\alpha)$ so that
+\[
+f''(x) 
+% f'(x) = - \alpha x^{\alpha - 1} \exp(-x^\alpha)
+\propto - \alpha (\alpha - 1) x^{\alpha - 2} \exp({-x^\alpha}) + \alpha^2
+x^{2\alpha - 2} \exp(-x^\alpha).
+\]
+so that
+\[
+\frac{x^2}{2} f''(x) \propto \frac{1}{2} \Big[ \alpha (1 - \alpha) x^{\alpha}
+\exp({-x^\alpha}) + \alpha^2 x^{2\alpha} \exp(-x^\alpha) \Big].
+\]
+We can plug in $x := 2x$ and do a change of variables $\xi = (2x)^\alpha$
+(that yields $dx = \frac{1}{2 \alpha} \xi^{1/\alpha - 1}$) to get
+\[
+p(\xi | \alpha) \propto \alpha \xi^{2 + \frac{1}{\alpha} - 1} e^{-\xi} + 
+(1-\alpha) \xi^{1 + \frac{1}{\alpha} - 1} e^{-\xi}.
+\]
+Then
+\[
+p(-|\beta|^\alpha) \propto \int_0^\infty \frac{1}{\xi^{1/\alpha}} \Big( 1 -
+\frac{|\beta|}{2 \xi^{1/\alpha}} \Big) p(\xi | \alpha) d\xi.
+\]
+Here $\beta \in \bbR$.
+
+I think this aligns with what is in the notes because they take the $1/\omega$
+and bring it into $p(\omega | \alpha)$.
+
+I'm not sure how you calculate
+\[
+\int z^{1/\alpha} (1 - |\beta| z^{-1/\alpha}) p(z | \beta^p, \alpha).
+\]
+
+Looking at James and Nick's paper though it appears that they actually use the
+normal scale-mixture of stable distributions for the EM.
+
+\section*{Mixture of Normals MCMC}
+
+If we let $S_\alpha$ be the stable distribution with parameter $\alpha$,
+following the notation of \cite{devroye-2009}, then as found on p. 1 of his
+paper
+\[
+\bbE[\exp(-z S_\alpha)] = \exp(-z^\alpha), \; z \geq 0, \alpha \in (0, 1].
+\]
+
+James and Nick want a scale mixture of normal.  They have
+\[
+\exp(-|t|^\gamma) = \bbE[ \exp(-\frac{t^2}{2} \Lambda) ], \; \gamma \in (0, 2],
+\]
+where $\Lambda$ is related to a stable distribution.  By letting $z = y^2$ we
+have
+\[
+\bbE[\exp(-\frac{y^2}{2} 2 S_\alpha)] = \exp(-(y^2)^\alpha)
+= \exp( - |y|^{2 \alpha} ).
+\]
+So we can reconcile the two by letting $\gamma = 2 \alpha$ and $\Lambda = 2
+S_{\gamma / 2}$ to get
+\[
+\bbE[\exp(-\frac{y^2}{2} 2 S_{\gamma / 2})] = \exp( - |y|^{\gamma} ), \; \gamma
+\in (0, 2].
+\]
+
+In bridge regression we have a prior
+\[
+p(\beta) = C(\gamma) \prod_{i=1}^p \exp (- |\beta_i / \tau|^\gamma ),
+\]
+which can be written as
+\[
+C(\gamma) \prod_{i=1}^p \bbE \Big[ \exp( - \frac{\beta_i^2}{2 \tau^2}
+\lambda_i ) \Big], \; \lambda_i \sim 2 S_{\gamma / 2}
+\]
+and then ``demarginalized'' as
+\[
+p(\beta, \lambda) = C(\gamma) 
+\prod_{i=1}^p \exp(- \frac{\beta_i^2}{2 \tau^2} \lambda_i) p(\lambda_i)
+\]
+where, again, $p(\lambda_i)$ is the density of $2 S_{\gamma/2}$.
+
+Thus by Bayes Theorem
+\[
+p(\beta, \lambda | y) \propto p(y | \beta) p(\beta, \lambda)
+\]
+since the likelihood doesn't involve $\lambda$.  Writing this out we have that
+\[
+\propto
+\exp \Big[ -\frac{1}{2 \sigma^2} (y - X \beta)'(y - X \beta) \Big]
+\prod_{i=1}^p \exp(- \frac{\beta_i^2}{2 \tau^2} \lambda_i) p(\lambda_i)
+\]
+or
+\[
+\exp \Big\{ \frac{-1}{2 \sigma^2} \Big[ \beta' X'X \beta - 2 \beta' X' y \Big]
++ \frac{-1}{2 \tau^2} \beta' \Lambda \beta \Big\} \prod_{i=1}^p p(\lambda_i).
+\]
+
+You can see from the first expression that
+\[
+p(\lambda_i | \beta, y) \propto \exp(- \frac{\beta_i^2}{2 \tau^2} \lambda_i) p(\lambda_i).
+\]
+Letting $x_i = \lambda_i / 2$ we have that
+\[
+p(x_i | \beta, y) \propto \exp(- \frac{\beta_i^2}{\tau^2} x_i) p(x_i)
+\]
+where $x_i \sim S_{\gamma / 2}$.  So to sample $\lambda_i | \beta, y$ we do
+\[
+x_i \sim \texttt{retstable}(\gamma / 2, 1.0, \beta_i^2 / \tau^2)
+\]
+and $\lambda_i = 2 x_i$.
+
+The posterior for $\beta$ is
+\[
+p(\beta | y, \lambda) \propto
+\exp \Big\{ \frac{-1}{2 \sigma^2} \Big( \beta' (X'X + \frac{\sigma^2}{\tau^2}
+\Lambda) \beta - 2 \beta' X' y \Big) \Big\}.
+\]
+Thus the precision $V^{-1}$ is
+\[
+V^{-1} = \frac{1}{\sigma^2} (X'X + \frac{\sigma^2}{\tau^2} \Lambda)
+\]
+and the mean $m$ solves
+\[
+X'y = \sigma^2 V^{-1} m.
+\]
+
+If we use an inverse-gamma prior for $\sigma^2$,
+\[
+p(\sigma^2) \sim IG(\text{shape}=a/2, \text{scale}=b/2)
+\]
+then the posterior for $\sigma^2$ is
+\[
+p(\sigma^2 | y, \beta) \sim IG(\text{shape}=a^*/2, \text{scale}=b^*/2)
+\]
+where $a^* = a + n$ and $n$ is the nubmer of observations and
+\[
+b^* = ||y - X \beta||^2 + b.
+\]
+
+\section{Mixture of Triangles MCMC}
+
+From the Beta mixtures work, we know that
+\[
+p(t) = c(\alpha) \exp(-t^\alpha) = \int_0^\infty \frac{1}{\omega} \Big(1 - \frac{t}{k
+  \omega}\Big)_+^{k-1} g(\omega) d\omega, \; t \geq 0
+\]
+where $c(\alpha)$ is the normalizing constant to make the kernel
+$\exp(-t^\alpha)$ a distribution.  Thus we can generate a symmetric distribution
+via
+\[
+p(t) = \frac{c(\alpha)}{2} \exp(-|t|^\alpha) 
+= \frac{1}{2} \int_0^\infty \frac{1}{\omega} \Big(1 - \frac{|t|}{k
+  \omega}\Big)_+^{k-1} g(\omega) d\omega, \; t \in \bbR.
+\]
+Further, we know that $g$ is defined by
+\[
+g(x/k) = (-1)^k \frac{x^k}{k!} f^{(k)}(x)
+\]
+where $f(x) = c(\alpha) \exp(-x^\alpha)$.
+
+When $k=2$, we have 
+\[
+f''(x) = c(\alpha) \Big[ \alpha (1 - \alpha) x^{\alpha-2} \exp (-x^\alpha) + \alpha^2
+x^{2\alpha - 2} \exp(-x^\alpha) \Big].
+\]
+Thus plugging into the integral above we have
+\[
+\int_0^\infty \frac{1}{2\omega} \Big(1 - \frac{|t|}{2 \omega}\Big)_+
+\frac{(2\omega)^2}{2} f''(2 \omega) d\omega.
+\]
+Letting $\zeta = 2 \omega$ we have $d \zeta = 2 d \omega$ so that the integral
+is
+\[
+\int_0^\infty \Big(1 - \frac{|t|}{\zeta}\Big)_+ \frac{\zeta}{4} f''(\zeta) d\zeta.
+\]
+Further
+\[
+\zeta f''(\zeta) = c(\alpha) \alpha \Big[ (1-\alpha) \zeta^{\alpha - 1}
+\exp(\zeta^\alpha) + \alpha \zeta^{2 \alpha - 1} \exp(-\zeta^\alpha) \Big].
+\]
+Substituting $\xi = \zeta^\alpha$ as above we end up with $d \zeta =
+\frac{1}{\alpha} \xi^{\frac{1-\alpha}{\alpha}} d \xi$ and
+\[
+\zeta f''(\zeta) d \zeta = c(\alpha) \Big[ (1-\alpha) \exp(-\xi) + \alpha \xi
+\exp(-\xi) \Big] d \xi.
+\]
+Thus the integral becomes
+\[
+p(t) =  c(\alpha) \int_0^\infty \Big( 1 - \frac{|t|}{\xi^{1/\alpha}} \Big)_+
+p(\xi) d \xi
+\]
+where
+\[
+p(\xi) = (1-\alpha) \exp(-\xi) + \alpha \xi \exp(-\xi)
+\]
+is a mixture of gammas.
+
+If we think in terms of $p(t) dt$ and do the change of variables $t = s / \tau$
+then $dt = \frac{ds}{\tau}$ and
+\[
+p(s, \xi) ds d\xi = c(\alpha) \frac{1}{\tau} \Big(1 - \frac{|s|}{\tau
+  \xi^{1/\alpha}}\Big)_+ p(\xi) d \xi d s.
+\]
+
+In our MCMC, when we sample $\xi$, this will actually be truncated so that we
+sample
+\[
+\propto \Big\{ (1-\alpha) \exp(-\xi) + \alpha \xi \exp(-\xi) \Big\} \one \{\xi
+\geq a \} d\xi.
+\]
+By letting $\bar \xi = \xi - a$ we have
+\begin{align*}
+& \propto e^{-a} \Big\{(1-a) \exp(
+{-\bar \xi} ) + \alpha (\bar \xi + a) \exp( {-\bar \xi} )
+\Big\} d \bar \xi \\
+& \propto \Big\{ (\alpha a + (1-\alpha)) \exp(-\bar \xi) + \alpha \bar \xi \exp(-\bar
+\xi) \Big\} d \hat \xi.
+\end{align*}
+Thus we have a mixture of gammas with a normalizing constant $1 + \alpha a$.
+
+\subsection{Truncated Multivariate Normal}
+
+Well, it appears that Rodriguez-Yam, Davis, and Scharf's method is better.  The
+basic idea, as explained by James's notes is the following.
+
+We have
+\[
+\beta \sim N(\hat \beta, \Sigma) \prod_{i=1}^P \one \{|\beta_j| \leq b_j \}.
+\]
+The basic idea, applicable to other truncation regions is to transform $\beta$
+so that you are sampling from a bunch of independent random variables that have
+been truncated (so they really aren't independent).  In particular, if we let $A
+= \Sigma^{-1/2}$ where the square root is taken in the sense of SVD, then we
+have
+\[
+Z = A\beta \sim N(m = A \hat \beta, \sigma^2 I)
+\]
+with the constraint
+\[
+b_j \leq \beta_j \leq b_j, \; \forall j
+\]
+becomes
+\[
+b_j \leq (A^{-1} z)_j \leq b_j, \; \forall j.
+\]
+We can write $(A^{-1} z)_j$ as
+\[
+[A^{-1}]_{ji} z_i + \sum_{k \neq i} [A^{-1}]_{jk} z_k. 
+\]
+Hence, in matrix notation we have
+\texttt{- b[j] - AInv[j,-i] z[-i] $\leq$ AInv[j,i] z[i] $\leq$ b[j] - AInv[j,-i] z[-i]}.
+
+I need to think about the above procedure when $\Sigma$ is not invertible, or
+rather, when the precision is not invertible.  You can still write the
+likelihood in that case.  I think you can maybe use the pseudo-inverse to still
+do the problem, though maybe not...  Really I think it should just make one of
+the variables uniform, but that's okay because of the truncation.
+
+Update: it is better to use the SVD.  So long as the truncation is region is
+bounded, you can then sample non-singular $X'X$.
+
+We have 
+\[
+\exp \Big\{ \frac{-1}{2 \sigma^2} \Big( \beta' X' y - \beta' X'X \beta \Big) \Big\}
+\]
+constrained by
+\[
+- b_j \leq \beta_j \leq b_j, \; \forall j.
+\]
+Letting $X = UDV'$ and $Z = V'\beta$ we have that (let $A = UD$)
+\[
+\exp \Big\{ \frac{-1}{2 \sigma^2} \Big( Z' A'y - Z' D^2 Z \Big) \Big\}
+\]
+constrained by
+\[
+- b_j \leq (Vz)_j \leq b_j
+\]
+as before so that
+\[
+-b_j - r_{ji} \leq v_{ji} z_i \leq b_j - r_{ji}, \; \forall j
+\]
+where $r_{ji} = \sum_{k \neq i} v_{jk} z_k$.
+
+When $d_i = 0$ we have that $A_{ki} = \sum_{\ell} U_{k\ell} D_{\ell i} = U_{ki}
+d_i = 0$ for all $k$.  Thus the terms in the exponent drops out and we are left
+with a uniform distribution for $z_j$.
+
+\subsection*{The product of a normal and a triangle}
+
+Things become more difficult when we try and apply this trick to the
+normal-triangle product.  In that case we have
+\[
+\exp \Big\{ \frac{-1}{2 \sigma^2} \Big( Z' A'y - Z' D^2 Z \Big) \Big\} 
+\prod_{j=1}^p \frac{1}{\kappa_j} \Big( \kappa_j - |\beta_j| \Big)_+.
+\]
+The product becomes a problem.  For each term we have the peicewise function
+\[
+\frac{1}{\kappa_j}
+\begin{cases}
+(\kappa_j - r_{ji} - v_{ji} z_i)_+, & v_{ji} z_i \geq - r_{ji} \\
+(\kappa_j + r_{ji} + v_{ji} z_i)_+, & v_{ji} z_i \leq - r_{ji}
+\end{cases}
+\]
+where $r_{ji} = \sum_{k \neq i} v_{jk} z_k$.  We take a product of these terms
+over $j$.  Further, by taking into account the $(\cdot)_+$ function we have
+\[
+\frac{1}{\kappa_j}
+\begin{cases}
+\kappa_j - r_{ji} - v_{ji} z_i, & \kappa_j - r_{ji} \geq v_{ji} z_i \geq - r_{ji} \\
+\kappa_j + r_{ji} + v_{ji} z_i, & -\kappa_j - r_{ji} \leq v_{ji} z_i \leq - r_{ji}
+\end{cases}
+\]
+The product over $j$ is now a product of piecewise line-segments, producing a
+polynomial.
+
+So how do you sample from this?
+
+\subsection{How can we speed this up?}
+
+We can also write $[A^{-1}]_{j,-i} z[-i] = [A^{-1}]_{j,\cdot} z^{(cur)} -
+[A^{-1}]_{j,i} z^{(cur)}_i$.  Alternatively, we can update incrementally, so
+that $x = [A^{-1}]_{j,-1} z_{-1} \ra x + [A^{-1}]_{j,1} z_{1}^{(new)} -
+[A^{-1}]_{j,2} z_{2}^{(old)}$.  You can preprocess $[A^{-1}]_{j,i} z_i^{(old)}$
+in $i$.  But I want to be working in terms of rows.  If $A$ is symmetric that
+helps us out.
+
+We can also calculate the min and the max on the fly.
+
+\subsection*{Sampling $\tau$}
+
+I need to derive the correct posterior for $\tau$.  It should be truncated.
+This is wrong in the current code.
+
+\section{Misc}
+
+There are a couple ways I can draw $\beta$ in the mixture of triangles case.
+The key link is
+\[
+xx[i,i] \hat \beta[i] = xx[i,-i] \hat \beta[-i] = xx[i,] \hat \beta = e_i xy.
+\]
+
+A couple ideas:
+
+Why not use the mixture of uniforms representation.  Then it reduces to the
+problem of sampling from a truncated normal distribution.
+
+I think this has to do with out space changes when you increase dimensions.  It
+becomes increasingly difficult to find a good proposal as the dimension
+increases.
+
+Can one use a mixture of a normal and a triangle to represent the posterior?
+
+How can we preprocess effectively.  In the case of the uniforms the shape of the
+parabola is not changing, it is just the region we are truncating that shrinks
+and expands, though its shape remains the same.
+
+What if we preprocess by sampling the normal a bunch.  Can we organize that
+sample in such a way that we can pick a sample from the region we want?  Can we
+use a GPU to do it.  Can we use binary search?  Can we marginalize beta to get
+an idea of what the truncation regions will be?
+
+I need to write a c-routine that samples beta.  In it I need to include the
+number of iterates to go through.  That way I can approximate an independent
+draw.  That will produce some nice plots.  It will also provide a nice benchmark
+in terms of time.
+
+As I get samples of the auxiliary variable in the uniform case, I can use those
+to adjust my ``pool'' of samples that I have stored.
+
+\section{Benchmarking}
+
+\begin{table}
+\centering
+\begin{tabular}{c c c c c c c c c}
+Method & Data set & $n$ & $p$ & Time (s) & Ave. ESS & SD ESS & Ave. ESR & SD ESR \\
+Tri. & BHI & 506 & 103 & 15.39 & 258  &  291 &    17 &  19 \\
+Stb. & --- & --- & --- & 19.56 & {\bf 5730} & 2681 & {\bf 293} & 137 \\
+
+Tri. & BH  & 506 & 13  &  0.22 & 4036 & 1888 & {\bf 18278} & 8550 \\ 
+Stb. & --- & --- & --- &  0.61 & {\bf 6615} & 2488 & 10887 & 4094 \\
+
+Tri. & DBT & 442 & 10  &  0.15 & 1978 & 1089 & {\bf 12978} & 7144 \\
+Stb. & --- & --- & --- &  0.49 & {\bf 5989} & 2306 & 12152 & 4679 \\
+
+\multicolumn{9}{c}{Orthogonalized Design Matrix} \\
+
+Tri. & BHI & 506 & 103 &  1.62 & 6435 & 1814 &  {\bf 3975} & 1120 \\
+Stb. & --- & --- & --- &  4.17 & {\bf 7690} & 1676 &  1844 &  402 \\
+
+Tri. & BH  & 506 & 13  &  0.16 & 7972 &  930 & {\bf 49561} & 5782 \\ 
+Stb. & --- & --- & --- &  0.56 & {\bf 9429} &  794 & 16821 & 1416 \\
+
+Tri. & DBT & 442 & 10  &  0.12 & 7026 & 1203 & {\bf 57915} & 9918 \\
+Stb. & --- & --- & --- &  0.41 & {\bf 8644} & 1059 & 20876 & 2558 \\
+
+\end{tabular}
+\end{table}
+
+Tri. refers to the mixture of triangles method and Stb. refers to the precision
+mixture of normals method.  BHI refers to the Boston Housing data with
+interactions and squared terms, BH refers to the Boston Housing data without any
+additional terms, and DBT refers the the diabetes data found in Efron's LARS
+package. For each data set and each method, 10,000 samples of $\beta$ were
+generated after an initial burn-in of 2,000.  The parameter $\sigma^2$ was given
+a Jeffrey's prior while the prior for $\tau = \nu^{-1/\alpha}$ was induced by
+placing a $\textmd{Ga}(2, \textmd{rate}=2)$ prior on $\nu$.  We calculated the
+effective sample size for each component of $(\beta_i)_{i=1}^p$ and summarized
+the results via the mean and standard deviation.  This process was repeated 10
+times; the mean quantities are recorded above.  We report the same results for
+the effective sampling rate, which is the effective sample size per second of
+run time.  Time is the execution time of our code while $n$ is the number of
+observations and $p$ is dimension of $\beta$.  The code was written using a C++
+wrapper function called through R using a MacBook Pro with 8GB of RAM and a 2
+GHz Intel Core i7 processor.  The exponentially stilted stable distributions
+were sampled using Luc Devroye's algorithm using code from the \texttt{copula}
+package.
+
+In addition to the general regression setting, we benchmarked posterior
+simulation for each method when the design matrix is orthongonal.  In that case,
+one may sample from the truncated multivariate Gaussian distribution $(\beta |
+y, \ldots)$ very quickly when using the mixture of triangles method.  For a fair
+comparison we also implemented a special routing to sample from $(\beta | y,
+\ldots)$ that takes advantage of the structure of the problem.
+
+The stable method always has a better effective sample size; however, the
+mixture of triangles consistently has better effective sampling rates, which is
+the speed at which effective samples are generated.  In the orthogonal setting,
+the mixture of triangles method is more competitive in terms of effective sample
+size and superior in terms of effective sampling rate. We take this to be
+evidence that the mixture of triangles may in some situations generate effective
+samples more quickly than the precision mixture of normals.  However, there are
+two caveats to this conclusion.  First, this is an aggregate measure and does
+not consider the variation in the effective sample sizes of the components of
+$\beta$.  Second, the effective sampling rate is a rather imprecise quantity
+since there are many factors that could affect the speed at which an algorithm
+runs.  The language, implementation, compiler options (when working in C, C++,
+or Fortran), and hardware all play a part in determining the runtime.  The above
+analysis does not examine these components of variation in the effective
+sampling rate; however, we did do our best to ensure that both the mixture of
+triangles method were compared on equal footing.  Ultimately, the effective
+sampling rates reported above are specific to the \texttt{BayesBridge} R package
+that we used to benchmark both methods.
+
+
+% If you have a bibliography.
+% The file withe bibliography is name.bib.
+\bibliography{bayesbridge}{}
+\bibliographystyle{abbrvnat}
+
+\end{document}
+
+%-------------------------------------------------------------------------------
+
+## To generate x exp(-0.5 x^2). y = 0.5 x^2.
+xgrid = seq(0, 4, 0.01);
+pgrid = xgrid * exp(-0.5 * xgrid^2);
+
+Y = rexp(10000);
+X = sqrt(2 * Y);
+hist(X, breaks=40, prob=TRUE);
+lines(xgrid, pgrid);
+
+## Altnernatively.  Inverse CDF.
+Y = runif(10000);
+X = sqrt(-2 * log(1 - Y));
+hist(X, breaks=40, prob=TRUE);
+lines(xgrid, pgrid);
+
+## These are actually identical because you genrate an exponential by
+## rexp = - ln (runif).
+
+## So it should be easy to do this truncated.
+a = 2
+b = 4
+ea = exp(-0.5 * a^2);
+eb = exp(-0.5 * b^2);
+Z = sqrt(-2 * log(ea - (ea - eb) * Y));
+par(mfrow=c(1,2))
+hist(Z, breaks=20, prob=TRUE);
+hist(X[X>=a & X<=b], breaks=20, prob=TRUE);
+
+## Can you split up (x-z) exp(-0.5 x^2) and then view it as a mixture.
+
+%-------------------------------------------------------------------------------

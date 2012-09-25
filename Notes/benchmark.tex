@@ -1,0 +1,107 @@
+\documentclass{article}
+
+%\input{commands}
+
+% Page Layout
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8in}
+%\parindent 0in
+%\parskip 12pt
+
+% Set Fancy Style
+%\pagestyle{fancy}
+
+%\lhead{Left Header}
+%\rhead{Right Header}
+
+\begin{document}
+
+% Change Font and Spacing
+\large % change the font size to 12pt
+% \linespread{1.1} % change the line spacing
+
+% Set the counter
+\setcounter{section}{0}
+
+\section{Benchmarking}
+
+\begin{table}
+\centering
+\begin{tabular}{c c c c c c c c c}
+Method & Data set & $n$ & $p$ & Time (s) & Ave. ESS & SD ESS & Ave. ESR & SD ESR \\
+Tri. & BHI & 506 & 103 & 15.39 & 258  &  291 &    17 &  19 \\
+Stb. & --- & --- & --- & 19.56 & {\bf 5730} & 2681 & {\bf 293} & 137 \\
+
+Tri. & BH  & 506 & 13  &  0.22 & 4036 & 1888 & {\bf 18278} & 8550 \\ 
+Stb. & --- & --- & --- &  0.61 & {\bf 6615} & 2488 & 10887 & 4094 \\
+
+Tri. & DBT & 442 & 10  &  0.15 & 1978 & 1089 & {\bf 12978} & 7144 \\
+Stb. & --- & --- & --- &  0.49 & {\bf 5989} & 2306 & 12152 & 4679 \\
+
+\multicolumn{9}{c}{Orthogonalized Design Matrix} \\
+
+Tri. & BHI & 506 & 103 &  1.62 & 6435 & 1814 &  {\bf 3975} & 1120 \\
+Stb. & --- & --- & --- &  4.17 & {\bf 7690} & 1676 &  1844 &  402 \\
+
+Tri. & BH  & 506 & 13  &  0.16 & 7972 &  930 & {\bf 49561} & 5782 \\ 
+Stb. & --- & --- & --- &  0.56 & {\bf 9429} &  794 & 16821 & 1416 \\
+
+Tri. & DBT & 442 & 10  &  0.12 & 7026 & 1203 & {\bf 57915} & 9918 \\
+Stb. & --- & --- & --- &  0.41 & {\bf 8644} & 1059 & 20876 & 2558 \\
+
+\end{tabular}
+\end{table}
+
+Tri. refers to the mixture of triangles method and Stb. refers to the precision
+mixture of normals method.  BHI refers to the Boston Housing data with
+interactions and squared terms, BH refers to the Boston Housing data without any
+additional terms, and DBT refers the the diabetes data found in Efron's LARS
+package. For each data set and each method, 10,000 samples of $\beta$ were
+generated after an initial burn-in of 2,000.  The parameter $\sigma^2$ was given
+a Jeffrey's prior while the prior for $\tau = \nu^{-1/\alpha}$ was induced by
+placing a $\textmd{Ga}(2, \textmd{rate}=2)$ prior on $\nu$.  We calculated the
+effective sample size for each component of $(\beta_i)_{i=1}^p$ and summarized
+the results via the mean and standard deviation.  This process was repeated 10
+times; the mean quantities are recorded above.  We report the same results for
+the effective sampling rate, which is the effective sample size per second of
+run time.  Time is the execution time of our code while $n$ is the number of
+observations and $p$ is dimension of $\beta$.  The code was written using a C++
+wrapper function called through R using a MacBook Pro with 8GB of RAM and a 2
+GHz Intel Core i7 processor.  The exponentially stilted stable distributions
+were sampled using Luc Devroye's algorithm using code from the \texttt{copula}
+package.
+
+In addition to the general regression setting, we benchmarked each method when
+the design matrix is orthogonal.  In that case, one may sample from the
+truncated multivariate Gaussian distribution $(\beta | y, \ldots)$ very quickly
+when using the mixture of triangles method.  For a fair comparison we also
+implemented a special routing to sample from $(\beta | y, \ldots)$ that takes
+advantage of the structure of the problem when using the mixture of normals
+method.  The same priors were used for $\sigma^2$ and $\tau$.
+
+The stable method always has a better effective sample size; however, the
+mixture of triangles consistently has better effective sampling rates, which is
+the speed at which effective samples are generated.  In the orthogonal setting,
+the mixture of triangles method is more competitive in terms of effective sample
+size and superior in terms of effective sampling rate. We take this to be
+evidence that the mixture of triangles may in some situations generate effective
+samples more quickly than the precision mixture of normals.  However, there are
+two caveats to this conclusion.  First, this is an aggregate measure and does
+not consider the variation in the effective sample sizes of the components of
+$\beta$.  Second, the effective sampling rate is a rather imprecise quantity
+since there are many factors that could affect the speed at which an algorithm
+runs.  The language, implementation, compiler options (when working in C, C++,
+or Fortran), and hardware all play a part in determining the runtime.  The above
+analysis does not examine these components of variation in the effective
+sampling rate; however, we did do our best to ensure that both the mixture of
+triangles method and the mixture of normals method were compared on equal
+footing.  Ultimately, the effective sampling rates reported above are specific
+to the \texttt{BayesBridge} R package that we used to benchmark both methods.
+
+% If you have a bibliography.
+% The file withe bibliography is name.bib.
+% \bibliography{name}{}
+% \bibliographystyle{plain}
+
+\end{document}
