@@ -26,13 +26,11 @@ is.above <- function(param, val, name){
 }
 
 # Check that the parameters are valid.
-check.parameters <- function(N, R, M, sig2, tau, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate){
+check.parameters <- function(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate){
     ok = TRUE;
     if (N!=R)    { print("Error: y and X do not conform."); ok=FALSE; }
     ok = ok *
          is.above(M         , 1, "niter") *
-         is.above(sig2      , 0, "sig2") *
-         is.above(tau       , 0, "tau") *
          is.above(alpha     , 0, "alpha") *
          is.above(sig2.shape, 0, "sig2.shape") *
          is.above(sig2.scale, 0, "sig2.scale") *
@@ -121,7 +119,7 @@ bridge.reg.tri <- function(y, X,
     M = nsamp;
     rtime = 0;
 
-    ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
 
     beta  = array(0, dim=c(P, M));
@@ -140,10 +138,10 @@ bridge.reg.tri <- function(y, X,
               as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rtime, as.integer(ortho),
               PACKAGE="Bridge");
 
-    output <- list("beta"=OUT[[1]], "u"=OUT[[2]], "w"=OUT[[3]], "sig2"=OUT[[4]], "tau"=OUT[[5]],
+    output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]],
                    "runtime"=OUT[[19]]);
 
-    rownames(output$beta) = colnames(X);
+    colnames(output$beta) = colnames(X);
 
     output
 }
@@ -166,7 +164,7 @@ bridge.reg.stb <- function(y, X,
     M = nsamp;
     rt = 0;
     
-    ok = check.parameters(N, R, M, 1.0, 1.0, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
 
     beta   = array(0, dim=c(P, M));
@@ -184,8 +182,8 @@ bridge.reg.stb <- function(y, X,
               as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(ortho),
               PACKAGE="Bridge");
 
-    output = list("beta"=OUT[[1]], "lambda"=OUT[[2]], "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[18]])
-    rownames(output$beta) = colnames(X);
+    output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[18]])
+    colnames(output$beta) = colnames(X);
 
     output
 }
