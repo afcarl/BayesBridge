@@ -35,9 +35,8 @@
 #define __BRIDGEREGRESSION__
 
 #include "Matrix.h"
-#include "RNG.hpp"
-#include <iostream>
-#include "retstable.c"
+#include "RNG.h"
+#include "retstable.h"
 #include <math.h>
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -45,9 +44,6 @@
 #ifdef USE_R
 #include <R_ext/Utils.h>
 #endif
-
-using std::cout;
-using std::cerr;
 
 #define MAX(a,b) ( (a) > (b) ? (a) : (b) )
 #define MIN(a,b) ( (a) < (b) ? (a) : (b) )
@@ -76,10 +72,9 @@ class BridgeRegression
   Matrix RT;
   Matrix RTInv;
 
-  // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> M;
-  Eigen::MatrixXd tV;
-  Eigen::MatrixXd a;
-  Eigen::MatrixXd d;
+  Matrix tV;
+  Matrix a;
+  Matrix d;
 
  public:
 
@@ -136,7 +131,7 @@ typedef BridgeRegression BR;
 
 BR::BridgeRegression()
 {
-  std::cerr << "Warning: Default constructor called." << std::endl;
+  Rprintf( "Warning: Default constructor called.");
 } // BridgeRegression
 
 //--------------------------------------------------------------------
@@ -149,8 +144,7 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
 {
   // Check conformity.
   if (X.rows()!=y.rows())
-    cerr << "Error: X and y do not conform." << std::endl;
-  //std:cerr << "Error: X and y do not conform." << std::endl;
+    Rprintf( "Error: X and y do not conform.");
 
   gemm(XX, X, X, 'T', 'N');
   gemm(Xy, X, y, 'T', 'N');
@@ -171,6 +165,13 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
 
   int n = X_.rows();
   int p = X_.cols();
+
+  // Eigen
+  // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> M;
+  Eigen::MatrixXd EtV;
+  Eigen::MatrixXd Ea;
+  Eigen::MatrixXd Ed;
+
   Eigen::Map<Eigen::MatrixXd> Xmap(&X(0), n, p);
   Eigen::Map<Eigen::MatrixXd> ymap(&y(0), n, 1);
   // Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeThinV);
@@ -178,15 +179,26 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeFullV);
   Eigen::MatrixXd A = svd.matrixU() * svd.singularValues().asDiagonal();
 
-  tV = svd.matrixV().transpose();
-  a.resize(p, 1);
-  d.resize(p, 1);
+  EtV = svd.matrixV().transpose();
+  Ea.resize(p, 1);
+  Ed.resize(p, 1);
   int ddim = (p <= n) ? p : n;
-  a.block(0,0,ddim,1) = A.transpose() * ymap;
-  d.block(0,0,ddim,1) = svd.singularValues();
+  Ea.block(0,0,ddim,1) = A.transpose() * ymap;
+  Ed.block(0,0,ddim,1) = svd.singularValues();
 
-  // cout << d;
-  // cout << "d:" << d.rows() << " " << d.cols() << "\n";
+  // Copy over.
+  tV.resize(p, p);
+  a.resize(p);
+  d.resize(p);
+  
+  for (int j=0; j<p; j++) {
+    a(j,0) = Ea(j,0);
+    d(j,0) = Ed(j,0);
+    for (int i=0; i<p; i++) {
+      tV(i,j) = EtV(i,j);
+    }
+  }
+  
 
 } // Bridge Regression
 
@@ -207,8 +219,8 @@ void BR::least_squares(Matrix & ls)
   catch (std::exception& e){
     ls.clone(Matrix(P)); 
     ls.fill(0.0);
-    printf("Warning: cannot calculate least squares estimate; X'X is singular.\n");
-    printf("Warning: setting least squares estimate to 0.0.\n");
+    Rprintf("Warning: cannot calculate least squares estimate; X'X is singular.\n");
+    Rprintf("Warning: setting least squares estimate to 0.0.\n");
   }
 }
 
@@ -225,8 +237,8 @@ void BR::sample_u(MF u, const MF& beta, const MF& omega, double tau, double alph
     u(j) = r.flat(0, right);
     // COMMENT COMMENT
     if (u(j) < 0) {
-      cout << "Warning: sampled negative value for u." << "\n";
-      cout << beta(j) << " " << omega(j) << " " << tau << " " << right << "\n";
+      Rprintf("Warning: sampled negative value for u.\n");
+      Rprintf("%g %g %g %g\n", beta(j), omega(j), tau, right);
     }
   }
 } // sample_u
@@ -264,12 +276,6 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
   Matrix z(RT, beta);
   double v = sig2; 
 
-  // cout << "beta: " << beta;
-  // cout << "b: " << b;
-  // cout << "Prec:\n" << Prec;
-  // cout << "RT:\n" << RT;
-  // cout << "RTInv:\n" << RT;
-
   Matrix ss("N", P-1);
 
   for (uint i=0; i<P; i++) {
@@ -293,10 +299,6 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
 
     }
 
-    // cout << "left:" << left;
-    // cout << "right:" << right;
-    // cout << i << ": z: " << z;
-      
     double lmax = maxAll(left);
     double rmin = minAll(right);
     
@@ -304,19 +306,14 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
       z(i) = r.tnorm(lmax, rmin, m(i), sqrt(v));
     }
     catch (std::exception& e) {
-      cout << "left:" << left;
-      cout << "right:" << right;
-      cout << i << ": z: " << z;
-      cout << "beta: " << beta;
-      cout << "b: " << b;
+      Rprintf("left: %g, right: %g, z[i]: %g\n", lmax, rmin, z(i));
+      // cout << "beta: " << beta;
+      // cout << "b: " << b;
       throw e;
     }
 
     if (i < P-1) ss(i) = i;
 
-    // cout << "lmax: " << lmax << ", rmin: " << rmin 
-    // 	 << ", z_i: " << z(i) << ", m_i: " << m(i) << "\n";
-  
   }
 
   gemm(beta, RTInv, z);
@@ -374,7 +371,7 @@ void BR::rtnorm_gibbs(double *betap,
     else {
       // double lw = lmax < rmin ? lmax : rmin;
       // double up = lmax > rmin ? lmax : rmin;
-      // if (lw!=lmax) printf("Problem with lmax,rmin: %g, %g \n", lmax, rmin);
+      // if (lw!=lmax) Rprintf("Problem with lmax,rmin: %g, %g \n", lmax, rmin);
       // zp[i] = lw + (up-lw) * r.unif();
       zp[i] = r.flat(lmax, rmin);
     }
@@ -424,8 +421,7 @@ void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& 
 
       // COMMENT COMMENT
       if (fabs(beta(j)) > b_j) {
-	cout << "b(j) problem: ";
-	cout << b_j << " " << beta(j) << "\n";
+	Rprintf("b(j) problem: b(j): %g, beta(j): %g\n", b_j, beta(j));
       }
       if (j < P-1) ss(j) = j;
     }
