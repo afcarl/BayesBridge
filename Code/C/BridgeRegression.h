@@ -131,7 +131,7 @@ typedef BridgeRegression BR;
 
 BR::BridgeRegression()
 {
-  Rprintf( "Warning: Default constructor called.");
+  printf( "Warning: Default constructor called.");
 } // BridgeRegression
 
 //--------------------------------------------------------------------
@@ -144,7 +144,7 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
 {
   // Check conformity.
   if (X.rows()!=y.rows())
-    Rprintf( "Error: X and y do not conform.");
+    printf( "Error: X and y do not conform.");
 
   gemm(XX, X, X, 'T', 'N');
   gemm(Xy, X, y, 'T', 'N');
@@ -219,8 +219,8 @@ void BR::least_squares(Matrix & ls)
   catch (std::exception& e){
     ls.clone(Matrix(P)); 
     ls.fill(0.0);
-    Rprintf("Warning: cannot calculate least squares estimate; X'X is singular.\n");
-    Rprintf("Warning: setting least squares estimate to 0.0.\n");
+    printf("Warning: cannot calculate least squares estimate; X'X is singular.\n");
+    printf("Warning: setting least squares estimate to 0.0.\n");
   }
 }
 
@@ -237,8 +237,8 @@ void BR::sample_u(MF u, const MF& beta, const MF& omega, double tau, double alph
     u(j) = r.flat(0, right);
     // COMMENT COMMENT
     if (u(j) < 0) {
-      Rprintf("Warning: sampled negative value for u.\n");
-      Rprintf("%g %g %g %g\n", beta(j), omega(j), tau, right);
+      printf("Warning: sampled negative value for u.\n");
+      printf("%g %g %g %g\n", beta(j), omega(j), tau, right);
     }
   }
 } // sample_u
@@ -306,7 +306,7 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
       z(i) = r.tnorm(lmax, rmin, m(i), sqrt(v));
     }
     catch (std::exception& e) {
-      Rprintf("left: %g, right: %g, z[i]: %g\n", lmax, rmin, z(i));
+      printf("left: %g, right: %g, z[i]: %g\n", lmax, rmin, z(i));
       // cout << "beta: " << beta;
       // cout << "b: " << b;
       throw e;
@@ -371,7 +371,7 @@ void BR::rtnorm_gibbs(double *betap,
     else {
       // double lw = lmax < rmin ? lmax : rmin;
       // double up = lmax > rmin ? lmax : rmin;
-      // if (lw!=lmax) Rprintf("Problem with lmax,rmin: %g, %g \n", lmax, rmin);
+      // if (lw!=lmax) printf("Problem with lmax,rmin: %g, %g \n", lmax, rmin);
       // zp[i] = lw + (up-lw) * r.unif();
       zp[i] = r.flat(lmax, rmin);
     }
@@ -421,7 +421,7 @@ void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& 
 
       // COMMENT COMMENT
       if (fabs(beta(j)) > b_j) {
-	Rprintf("b(j) problem: b(j): %g, beta(j): %g\n", b_j, beta(j));
+	printf("b(j) problem: b(j): %g, beta(j): %g\n", b_j, beta(j));
       }
       if (j < P-1) ss(j) = j;
     }
