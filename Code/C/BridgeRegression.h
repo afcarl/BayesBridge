@@ -36,7 +36,7 @@
 
 #include "Matrix.h"
 #include "RNG.h"
-#include "retstable.h"
+#include "retstable.c"
 #include <math.h>
 #include <Eigen/Core>
 #include <Eigen/SVD>
