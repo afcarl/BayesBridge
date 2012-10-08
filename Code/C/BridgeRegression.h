@@ -35,7 +35,7 @@
 #define __BRIDGEREGRESSION__
 
 #include "Matrix.h"
-#include "RNG.h"
+#include "RNG.hpp"
 #include "retstable.c"
 #include <math.h>
 #include <Eigen/Core>
@@ -108,11 +108,15 @@ class BridgeRegression
   void sample_u(MF u, const MF& beta, const MF& omega, double tau, double alpha, RNG& r);
   void sample_omega(MF omega, const MF& beta, const MF& u, double tau, double alpha, RNG& r);
   void sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_scale, RNG& r);
-  void sample_tau(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r);
+  void sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double alpha, 
+		      double tau2_shape, double tau2_scale, RNG& r);
+
+  void sample_tau_marg(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r);
 
   void sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r);
   void sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r);
   void sample_beta_stable_ortho(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r);
+  void sample_tau_stable(MF tau, const MF& beta, const MF& lambda, double tau2_shape, double tau2_scale, RNG& r);
 
   // Expectation Maximization.
   int EM(Matrix& beta, double sig, double tau, double alpha,
@@ -261,8 +265,24 @@ void BR::sample_omega(MF omega, const MF& beta, const MF& u, double tau, double 
   }
 } // sample_omega
 
+//------------------------------------------------------------------------------
+void BR::sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double alpha,
+		    double tau2_shape, double tau2_scale, RNG& r)
+{
+  double m = -1.0;
+  for(int j=0; j < (int)P; ++j) {
+    double m_j = fabs(beta(j)) / ( (1-u(j)) * pow(w(j), 1.0/alpha) );
+    m = m < m_j ? m_j : m;
+  }
+  double a = tau2_shape + 0.5 * (double)P;
+  double b = tau2_scale;
+  double phi = r.rtgamma_rate(a,b, 1.0/(m*m));
+  tau(0) = sqrt(1.0/phi);
+}
+
 //--------------------------------------------------------------------
 
+// Not using SVD.
 void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
 {
   // Matrix RT, RTInv;
@@ -322,6 +342,7 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// Using the SVD.
 void BR::rtnorm_gibbs_wrapper(MF beta, double sig2, MF b, RNG& r)
 {
   int Pint = P;
@@ -380,6 +401,8 @@ void BR::rtnorm_gibbs(double *betap,
 
   gemm(beta, tV, z, 'T', 'N');
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -467,7 +490,7 @@ void BR::sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_sca
 } // sample_sig2
 
 //--------------------------------------------------------------------
-void BR::sample_tau(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r)
+void BR::sample_tau_marg(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r)
 {
   double shape = nu_shape + ((double)P) / alpha;
 
@@ -526,6 +549,18 @@ void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, doubl
 
   gemm(beta, L, ndraw, 'N', 'N', 1.0, 1.0);
 
+}
+
+//------------------------------------------------------------------------------
+void BR::sample_tau_stable(MF tau, const MF& beta, const MF& lambda, double tau2_shape, double tau2_scale, RNG& r)
+{
+  double a = tau2_shape + 0.5 * (double) P;
+  double b = tau2_scale;
+  for (int i = 0; i < (int)P; ++i)
+    b += 0.5 * beta(i)*beta(i)*lambda(i);
+  // Don't forget the 0.5
+  double phi = r.gamma_rate(a,b);
+  tau(0) = sqrt(1/phi);
 }
 
 //////////////////////////////////////////////////////////////////////

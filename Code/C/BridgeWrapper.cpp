@@ -5,14 +5,10 @@
 #include <R_ext/PrtUtil.h>
 #endif
 
-#include "BridgeWrapper.hpp"
+#include "BridgeWrapper.h"
 #include <time.h>
-#include <iostream>
 #include <math.h>
 #include <exception>
-
-using std::cout;
-using std::cerr;
 
 // #include <algorithm>
 
@@ -93,21 +89,23 @@ double bridge_regression(MatrixFrame & beta,
 
   // Keep track of time.
   clock_t start, end;
+  double total_time;
+
+  start = clock();
 
   try {
 
-    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
-    if (!know_tau ) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
-
-    start = clock();
+    // if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+    if (!know_tau ) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
 
     // Burn-In.
     for(uint i = 0; i < burn; i++){
-      if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      // if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
-      if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r);
+      br.sample_tau_tri(tau[0], beta[0], u[0], omega[0], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -115,7 +113,7 @@ double bridge_regression(MatrixFrame & beta,
 
     end = clock();
 
-    double total_time = (double)(end - start) / CLOCKS_PER_SEC;
+    total_time = (double)(end - start) / CLOCKS_PER_SEC;
     printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
     printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
 
@@ -123,26 +121,28 @@ double bridge_regression(MatrixFrame & beta,
 
     // MCMC
     for(uint i = 1; i < M; i++){
-      if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
-      br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
-      br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
+      // if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r);
+      br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i-1](0), alpha, r);
+      br.sample_u(u[i], beta[i-1], omega[i], tau[i-1](0), alpha, r);
+      // br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r);
+      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i-1](0), alpha, r);
+      if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
     }
-
-    end = clock();
-
-    cout << "Sampling complete: "  << (double)(end - start) / CLOCKS_PER_SEC 
-	 << " sec. for " << M << " iterations." << "\n";
 
   }
   catch (std::exception& e) {
     printf("Error: %s\n", e.what());
     printf("Aborting Gibbs sampler.\n");
   }
+
+  end = clock();
+  
+  total_time = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("Sampling complete: %g sec. for %i iterations.\n", total_time, M);
 
   return (double)(end - start) / CLOCKS_PER_SEC;
 
@@ -190,45 +190,57 @@ double bridge_regression_stable(MatrixFrame & beta,
 
   // Keep track of time.
   clock_t start, end;
+  double total_time;
 
   start = clock();
 
-  // br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+  try {
 
-  // Burn-In.
-  for(uint i = 0; i < burn+1; i++){
-    if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
-    br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
-    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
-    br.sample_beta_stable(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
-    #ifdef USE_R
-    if (i % 10 == 0) R_CheckUserInterrupt();
-    #endif
+    if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Marginal
+    // if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+
+    // Burn-In.
+    for(uint i = 0; i < burn+1; i++){
+      // if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Marginal
+      if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);
+      br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
+      br.sample_beta_stable(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
+      if (!know_tau) br.sample_tau_stable(tau[0], beta[0], lambda[0], 4.0, 4.0, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+
+    end = clock();
+    
+    total_time = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
+    printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
+    
+    start = clock();
+    
+    // MCMC
+    for(uint i = 1; i < M; i++){
+      // if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Marginal.
+      if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
+      br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i-1](0), r);
+      br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r); 
+      if (!know_tau) br.sample_tau_stable(tau[i], beta[i], lambda[i], 4.0, 4.0, r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+   
+  }
+  catch (std::exception& e) {
+    printf("Error: %s\n", e.what());
+    printf("Aborting Gibbs sampler.\n");
   }
 
   end = clock();
-
-  double total_time = (double)(end - start) / CLOCKS_PER_SEC;
-  printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
-  printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
-
-  start = clock();
-
-  // MCMC
-  for(uint i = 1; i < M; i++){
-    if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
-    br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
-    if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-    br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
-    #ifdef USE_R
-    if (i % 10 == 0) R_CheckUserInterrupt();
-    #endif
-  }
-
-  end = clock();
-
-  cout << "Sampling complete: " << (double)(end - start) / CLOCKS_PER_SEC
-       << " sec. for " << M << " iterations." << "\n";
+  
+  total_time = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("Sampling complete: %g sec. for %i iterations.\n", total_time, M);
 
   return (double)(end - start) / CLOCKS_PER_SEC;
 
@@ -284,17 +296,18 @@ double bridge_regression_ortho(MatrixFrame & beta,
 
   // Keep track of time.
   clock_t start, end;
+  double total_time;
+
+  start = clock();
 
   try {
 
     if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
-    if (!know_tau ) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
-
-    start = clock();
+    if (!know_tau ) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
 
     // Burn-In.
     for(uint i = 0; i < burn; i++){
-      if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
       br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
@@ -306,7 +319,7 @@ double bridge_regression_ortho(MatrixFrame & beta,
 
     end = clock();
 
-    double total_time = (double)(end - start) / CLOCKS_PER_SEC;
+    total_time = (double)(end - start) / CLOCKS_PER_SEC;
     printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
     printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
 
@@ -314,7 +327,7 @@ double bridge_regression_ortho(MatrixFrame & beta,
 
     // MCMC
     for(uint i = 1; i < M; i++){
-      if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
       br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
       br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
@@ -324,16 +337,16 @@ double bridge_regression_ortho(MatrixFrame & beta,
       #endif
     }
 
-    end = clock();
-
-    cout << "Sampling complete: "  << (double)(end - start) / CLOCKS_PER_SEC 
-	 << " sec. for " << M << " iterations." << "\n";
-
   }
   catch (std::exception& e) {
     printf("Error: %s\n", e.what());
     printf("Aborting Gibbs sampler.\n");
   }
+
+  end = clock();
+
+  total_time = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("Sampling complete: %g sec. for %i iterations.\n", total_time, M);
 
   return (double)(end - start) / CLOCKS_PER_SEC;
 
@@ -382,45 +395,54 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
 
   // Keep track of time.
   clock_t start, end;
+  double total_time;
 
   start = clock();
 
-  // br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+  try{
 
-  // Burn-In.
-  for(uint i = 0; i < burn+1; i++){
-    if (!know_tau) br.sample_tau(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
-    br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
-    if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
-    br.sample_beta_stable_ortho(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
-    #ifdef USE_R
-    if (i % 10 == 0) R_CheckUserInterrupt();
-    #endif
+    // br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+
+    // Burn-In.
+    for(uint i = 0; i < burn+1; i++){
+      if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
+      if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
+      br.sample_beta_stable_ortho(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+
+    end = clock();
+
+    total_time = (double)(end - start) / CLOCKS_PER_SEC;
+    printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
+    printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
+
+    start = clock();
+
+    // MCMC
+    for(uint i = 1; i < M; i++){
+      if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
+      if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
+      br.sample_beta_stable_ortho(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
+      #ifdef USE_R
+      if (i % 10 == 0) R_CheckUserInterrupt();
+      #endif
+    }
+
+  }
+  catch (std::exception& e) {
+    printf("Error: %s\n", e.what());
+    printf("Aborting Gibbs sampler.\n");
   }
 
   end = clock();
 
-  double total_time = (double)(end - start) / CLOCKS_PER_SEC;
-  printf("Burn-in complete: %g sec. for %i iterations.\n", total_time, burn);
-  printf("Expect approx. %g sec. for %i samples.\n", total_time * M / burn, M);
-
-  start = clock();
-
-  // MCMC
-  for(uint i = 1; i < M; i++){
-    if (!know_tau) br.sample_tau(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
-    br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
-    if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-    br.sample_beta_stable_ortho(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
-    #ifdef USE_R
-    if (i % 10 == 0) R_CheckUserInterrupt();
-    #endif
-  }
-
-  end = clock();
-
-  cout << "Sampling complete: " << (double)(end - start) / CLOCKS_PER_SEC
-       << " sec. for " << M << " iterations." << "\n";
+  total_time = (double)(end - start) / CLOCKS_PER_SEC;
+  printf("Sampling complete: %g sec. for %i iterations.\n", total_time, M);
 
   return (double)(end - start) / CLOCKS_PER_SEC;
 
@@ -448,7 +470,7 @@ void bridge_EM(double *betap,
   Matrix y(yp, *N, 1);
   Matrix X(Xp, *N, *P);
 
-  if (*use_cg) cout << "Using conjugate gradient method.\n";
+  if (*use_cg) printf("Using conjugate gradient method.\n");
 
   int total_iter = EM(beta, y, X, *ratio, *alpha, *lambda_max, *tol, *max_iter, *use_cg);
   *max_iter = total_iter;
@@ -640,6 +662,27 @@ void rtnorm_both(double *x, double *left, double* right, double *mu, double *sig
     #endif
 
     x[i] = r.tnorm(left[i], right[i], mu[i], sig[i]);
+  }
+
+  #ifdef USE_R
+  PutRNGstate();
+  #endif
+}
+
+void rrtgamma_rate(double *x, double *scale, double *rate, double *right_t, int *num)
+{
+  RNG r;
+
+  #ifdef USE_R
+  GetRNGstate();
+  #endif
+
+  for(int i=0; i < *num; ++i){
+    #ifdef USE_R
+    if (i%1==0) R_CheckUserInterrupt();
+    #endif
+
+    x[i] = r.rtgamma_rate(scale[i], rate[i], right_t[i]);
   }
 
   #ifdef USE_R

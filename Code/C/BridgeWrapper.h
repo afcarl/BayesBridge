@@ -184,6 +184,8 @@ extern "C"
 
   void rtnorm_both(double *x, double *left, double* right, double *mu, double *sig, int *num);
 
+  void rrtgamma_rate(double *x, double *scale, double *rate, double *right_t, int *num);
+
 }
 
 #endif
