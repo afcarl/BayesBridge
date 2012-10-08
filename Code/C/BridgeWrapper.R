@@ -335,3 +335,32 @@ rtnorm <- function(num=1, mu=0.0, sig=1.0, left=-Inf, right=Inf)
 
   x
 }
+
+rrtgamma <- function(num=1, shape=1.0, rate=1.0, rtrunc=1.0, scale=1.0/rate)
+{
+  rate = 1.0 / scale;
+  
+  ## Check Parameters.
+  if (!all(shape>0)) {
+    print("shape must be greater than zero.");
+    return(NA);
+  }
+  if (!all(rate>0)) {
+    print("scale/rate must be greater than zero.");
+    return(NA);
+  }
+  if (!all(rtrunc>0)) {
+    print("rtrunc must be greater than zero.");
+    return(NA);
+  }
+
+  shape = array(shape, num);
+  rate  = array(rate , num);
+  rtrunc = array(rtrunc, num);
+  
+  x = rep(0, num);
+
+  out = .C("rrtgamma_rate", x, shape, rate, rtrunc, as.integer(num));
+
+  out[[1]]
+}
