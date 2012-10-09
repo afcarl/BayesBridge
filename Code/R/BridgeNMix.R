@@ -8,10 +8,10 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   require("copula");
 
   ## Set up.
-  X <- as.matrix(x)
+  X <- as.matrix(X)
   xx <- t(X)%*%X
   xy <- t(X)%*%y
-  ## ixx <- chol2inv(chol(xx))
+  ixx <- chol2inv(chol(xx))
 
   known.sig2 = sig2 > 0
   known.tau  = tau > 0
@@ -19,18 +19,20 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   p = ncol(X)
   n = length(y)
 
+  gamma = alpha
+
   ## Initialize.
-  ## bhat <- drop(ixx%*%xy)
+  bhat <- drop(ixx%*%xy)
   beta <- rep(1,p)
   lambda = rep(1, p);
   
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
   
-  output <- list(lambda = matrix(nrow=niter, ncol=length(beta)),
-                 beta   = matrix(nrow=niter, ncol=length(beta)),
-                 sig2   = rep(0, niter),
-                 tau    = rep(0, niter)
+  output <- list(lambda = matrix(nrow=nsamp, ncol=length(beta)),
+                 beta   = matrix(nrow=nsamp, ncol=length(beta)),
+                 sig2   = rep(0, nsamp),
+                 tau    = rep(0, nsamp)
                  )
 
   colnames(output$beta) = colnames(X);
@@ -44,25 +46,23 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
       if( i==(burn+1) ) ess.time = proc.time();
 
       ## tau -- marginalized draw.
-      if (!known.tau) tau = draw.tau(beta, alpha, nu.shape, nu.rate)
+      if (!known.tau) tau = draw.tau(beta, gamma, nu.shape, nu.rate)
 
       ## sig2
       if (!known.sig2) sig2 = draw.sig2(beta, X, y, sig2.shape, sig2.scale)
 
-      ## (lambda, beta | e.e.) - JOINT DRAW
-
       ## lambda
       for(j in 1:p)
-        lambda[j] = 2 * retstable(alpha, 1.0, beta[j]^2 / tau^2, method="LD");
+        lambda[j] = 2 * retstable(0.5 * gamma, 1.0, beta[j]^2 / tau^2, method="LD");
 
       ## beta
-      VInv = xx + diag(lambda * sig2 / tau^2, p);
+      VInv = (xx + diag(lambda * sig2 / tau^2, p));
       V = solve(VInv);
-      U = chol(V);
+      U = chol(V) * sqrt(sig2);
       m = V %*% xy;
-      beta = drop( m + sqrt(sig2) * t(U) %*% rnorm(p))
+      beta = drop(m + t(U) %*% rnorm(p))
 
-      if(niter > burn)
+      if(nsamp > burn)
         {
           output$beta[i-burn,]   = beta
           output$lambda[i-burn,] = lambda
@@ -114,12 +114,12 @@ if (FALSE) {
   tau = 100.0
   
   bridge.tri = bridge.reg.know.sig2(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2=sig2, tau=tau);
-  bridge.stb = bridge.stable(y, X, niter=nsamp, burn=burn, alpha=0.5, sig2, tau=tau, verbose=1000);
+  bridge.stb = bridge.stable(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2, tau=tau, verbose=1000);
 
   ## bridge.tri.R <- bridge.reg.know.sig2.R(y, X, nsamp=nsamp, alpha=0.5, burn=burn,
   ##                                        sig2=sig2, tau=tau, verbose=1000);
 
-  bridge.tri.R <- bridge(y, X, niter=nsamp, alpha=0.5, burn=burn,
+  bridge.tri.R <- bridge(y, X, nsamp=nsamp, alpha=0.5, burn=burn,
                          sig2=sig2, tau=tau, verbose=1000);
 
   bridge.em = bridge.EM(y, X, alpha=0.5, ratio=tau/sqrt(sig2));
