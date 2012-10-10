@@ -24,6 +24,7 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   ## Initialize.
   bhat <- drop(ixx%*%xy)
   beta <- rep(1,p)
+  beta = bhat
   lambda = rep(1, p);
   
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
