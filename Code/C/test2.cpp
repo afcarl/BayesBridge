@@ -45,7 +45,7 @@ int main(int argc, char** argv)
   Matrix sig2((uint)1, (uint)1, M);
   Matrix tau ((uint)1, (uint)1, M);
 
-  bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100, 1);
+  bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100, 30, true);
   // bridge_regression_ortho(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
   
   Matrix lambda(N, (uint)1, M);

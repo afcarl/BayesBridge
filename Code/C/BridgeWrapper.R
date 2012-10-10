@@ -75,7 +75,7 @@ bridge.EM <- function(y, X,
     sig2 = 1.0;
     tau = ratio;
 
-    ok = check.parameters(N, R, 1, sig2, tau, alpha, 1.0, 1.0, 1.0, 1.0) *
+    ok = check.parameters(N, R, 1, sig2, tau, alpha, 1.0, 1.0) *
          check.EM(lambda.max, tol, max.iter);
 
     if (!ok) { break; }
@@ -111,7 +111,7 @@ bridge.reg.tri <- function(y, X,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=0.5, nu.rate=0.5,
                            sig2.true=0.0, tau.true=0.0,
-                           burn=500, ortho=FALSE, betaburn=0)
+                           burn=500, ortho=FALSE, betaburn=0, use.hmc=FALSE)
 {
     N = length(y);
     R = dim(X)[1];
@@ -136,7 +136,7 @@ bridge.reg.tri <- function(y, X,
               nu.shape, nu.rate,
               sig2.true, tau.true,
               as.integer(P), as.integer(N), as.integer(M),
-              as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn),
+              as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn), as.integer(use.hmc),
               PACKAGE="Bridge");
 
     output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]],

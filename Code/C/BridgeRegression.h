@@ -109,12 +109,12 @@ class BridgeRegression
   void sample_beta(MF beta, const MF& beta_prev, 
 		   const MF& u, const MF& omega, 
 		   double sig2, double tau, double alpha, 
-		   RNG& r, int niter=1);
+		   RNG& r, int burn=0, bool use_hmc=false);
 
   void sample_beta_ortho(MF beta, const MF& beta_prev, 
 			 const MF& u, const MF& omega, 
 			 double sig2, double tau, double alpha, 
-			 RNG& r, int niter=1);
+			 RNG& r, int burn=0);
 
   // For sampling everything else.
   void sample_u(MF u, const MF& beta, const MF& omega, double tau, double alpha, RNG& r);
@@ -536,10 +536,9 @@ void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& 
 
 }
 
-void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int burn)
+void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int burn, bool use_hmc)
 {
   burn = burn > 0 ? burn : 0;
-  int niter = burn + 1;
 
   Matrix b(P);
   for(uint j=0; j<P; j++)
@@ -551,15 +550,18 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
   // Matrix bhat(P);
   // least_squares(bhat);
 
-  for(int i=0; i<niter; i++) {
-    // rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
-    rtnorm_gibbs_wrapper(beta, sig2, b, r);
+  if (!use_hmc) {
+    int niter = burn + 1;
+    for(int i=0; i<niter; i++) {
+      // rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
+      rtnorm_gibbs_wrapper(beta, sig2, b, r);
+    }
   }
-
-  // HMC
-  // rtnorm_hmc(beta, beta_prev, sig2, b, burn, floor(r.unif() * 10000000));
-
-  // Try setting the seed to 0 for all draws.  Look what happens.  Things are off.
+  else {
+    // HMC
+    rtnorm_hmc(beta, beta_prev, sig2, b, burn, floor(r.unif() * 10000000));
+    // Try setting the seed to 0 for all draws.  Look what happens.  Things are off.
+  }
 
 } // sample_beta
 

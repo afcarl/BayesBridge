@@ -60,7 +60,8 @@ double bridge_regression(MatrixFrame & beta,
 			 double true_sig2, // 
 			 double true_tau , // Stored in tau  if true.
 			 uint burn,
-			 int betaburn)
+			 int betaburn,
+			 bool use_hmc)
 {
   BridgeRegression br(X, y);
 
@@ -105,7 +106,7 @@ double bridge_regression(MatrixFrame & beta,
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
-      br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r, betaburn);
+      br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r, betaburn, use_hmc);
       // br.sample_tau_tri(tau[0], beta[0], u[0], omega[0], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
@@ -126,7 +127,7 @@ double bridge_regression(MatrixFrame & beta,
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
       br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
-      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r, betaburn);
+      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r, betaburn, use_hmc);
       // You must change indexing if the following is uncommented.
       // if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
       #ifdef USE_R
@@ -503,7 +504,8 @@ void bridge_regression(double *betap,
 		       const int *burn,
 		       double *runtime,		 
 		       const bool *ortho,
-		       const int *betaburn)
+		       const int *betaburn,
+		       const bool *use_hmc)
 {
   Matrix y(yp, *N,  1);
   Matrix X(Xp, *N, *P);
@@ -525,7 +527,7 @@ void bridge_regression(double *betap,
 				 *sig2_shape, *sig2_scale,
 				 *nu_shape, *nu_rate,
 				 *true_sig2, *true_tau,
-				 *burn, *betaburn);
+				 *burn, *betaburn, *use_hmc);
   }
   else {
 
