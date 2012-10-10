@@ -111,7 +111,7 @@ bridge.reg.tri <- function(y, X,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=0.5, nu.rate=0.5,
                            sig2.true=0.0, tau.true=0.0,
-                           burn=500, ortho=FALSE)
+                           burn=500, ortho=FALSE, betaburn=0)
 {
     N = length(y);
     R = dim(X)[1];
@@ -135,7 +135,8 @@ bridge.reg.tri <- function(y, X,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
               sig2.true, tau.true,
-              as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rtime, as.integer(ortho),
+              as.integer(P), as.integer(N), as.integer(M),
+              as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn),
               PACKAGE="Bridge");
 
     output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]],

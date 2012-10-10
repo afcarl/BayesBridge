@@ -1,10 +1,19 @@
 #include "Matrix.h"
 #include "RNG.hpp"
-#include "BridgeWrapper.hpp"
+#include "BridgeWrapper.h"
 #include "BridgeRegression.h"
+
+#include "HmcSampler.h"
+
+#include <iostream>
+using std::cout;
 
 int main(int argc, char** argv)
 {
+  // int d = 3;
+  // int s = 1;
+  // HmcSampler hmc(d, s);
+
   // The data.
   Matrix X; X.read("X.lars", true);
   // Matrix X; X.read("Q.lars", true);
@@ -16,7 +25,7 @@ int main(int argc, char** argv)
   // // True data.
   // Matrix beta_data; beta_data.read("beta.data", true);
 
-  uint M = 100000;
+  uint M = 1000;
   uint P = X.cols();
   uint N = X.rows();
 
@@ -36,19 +45,17 @@ int main(int argc, char** argv)
   Matrix sig2((uint)1, (uint)1, M);
   Matrix tau ((uint)1, (uint)1, M);
 
-  //bridge_regression_test(beta, u, omega, tau, y, X, 2500.0, alpha, 0.5, 0.5, 500);
-
-  // bridge_regression(beta, u, omega, y, X, 2500.0, 1.0, alpha, 100);
-  bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 41, 100);
+  bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100, 1);
+  // bridge_regression_ortho(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
   
   Matrix lambda(N, (uint)1, M);
 
-  // bridge_regression_stable(beta, lambda, sig2, y, X, 1.0, alpha, 0.0, 0.0, 100);
-  // bridge_regression_stable(beta, lambda, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 100);
+  // bridge_regression_stable(beta, lambda, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
+  // bridge_regression_stable_ortho(beta, lambda, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
 
   printf("Regression done.  Write out.\n");
 
-  // beta.write("beta.post");
+  beta.write("beta.post");
   // u.write("u.post");
   // omega.write("omega.post");
   // tau.write("tau.post");

@@ -59,7 +59,8 @@ double bridge_regression(MatrixFrame & beta,
 			 double nu_rate,
 			 double true_sig2, // 
 			 double true_tau , // Stored in tau  if true.
-			 uint burn)
+			 uint burn,
+			 int betaburn)
 {
   BridgeRegression br(X, y);
 
@@ -80,7 +81,7 @@ double bridge_regression(MatrixFrame & beta,
   br.least_squares(ls);
   beta[0].copy(ls);
 
-  u[0].fill(0.0);
+  u[0].fill(0.5);
 
   if ( know_sig2 ) sig2.fill(true_sig2);
   if ( know_tau  ) tau.fill(true_tau);
@@ -100,12 +101,12 @@ double bridge_regression(MatrixFrame & beta,
 
     // Burn-In.
     for(uint i = 0; i < burn; i++){
-      // if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Sample tau.
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha, r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha, r);
-      br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r);
-      br.sample_tau_tri(tau[0], beta[0], u[0], omega[0], alpha, 4.0, 4.0, r);
+      br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha, r, betaburn);
+      // br.sample_tau_tri(tau[0], beta[0], u[0], omega[0], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -121,13 +122,13 @@ double bridge_regression(MatrixFrame & beta,
 
     // MCMC
     for(uint i = 1; i < M; i++){
-      // if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
+      if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-      br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i-1](0), alpha, r);
-      br.sample_u(u[i], beta[i-1], omega[i], tau[i-1](0), alpha, r);
-      // br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r);
-      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i-1](0), alpha, r);
-      if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
+      br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
+      br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
+      br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r, betaburn);
+      // You must change indexing if the following is uncommented.
+      // if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -201,11 +202,11 @@ double bridge_regression_stable(MatrixFrame & beta,
 
     // Burn-In.
     for(uint i = 0; i < burn+1; i++){
-      // if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Marginal
+      if (!know_tau) br.sample_tau_marg(tau[0], beta[0], alpha, nu_shape, nu_rate, r);  // Marginal
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);
       br.sample_lambda(lambda[0], beta[0], alpha, tau[0](0), r);
       br.sample_beta_stable(beta[0], lambda[0], alpha, sig2[0](0), tau[0](0), r);
-      if (!know_tau) br.sample_tau_stable(tau[0], beta[0], lambda[0], 4.0, 4.0, r);
+      // if (!know_tau) br.sample_tau_stable(tau[0], beta[0], lambda[0], 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -221,11 +222,12 @@ double bridge_regression_stable(MatrixFrame & beta,
     
     // MCMC
     for(uint i = 1; i < M; i++){
-      // if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Marginal.
+      if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Marginal.
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-      br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i-1](0), r);
-      br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r); 
-      if (!know_tau) br.sample_tau_stable(tau[i], beta[i], lambda[i], 4.0, 4.0, r);
+      br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
+      br.sample_beta_stable(beta[i], lambda[i], alpha, sig2[i](0), tau[i](0), r); 
+      // You must change indexing if the following is uncommented.
+      // if (!know_tau) br.sample_tau_stable(tau[i], beta[i], lambda[i], 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -499,8 +501,9 @@ void bridge_regression(double *betap,
 		       const int *N,
 		       const int *M,
 		       const int *burn,
-		       double *runtime,
-		       const bool *ortho)
+		       double *runtime,		 
+		       const bool *ortho,
+		       const int *betaburn)
 {
   Matrix y(yp, *N,  1);
   Matrix X(Xp, *N, *P);
@@ -522,7 +525,7 @@ void bridge_regression(double *betap,
 				 *sig2_shape, *sig2_scale,
 				 *nu_shape, *nu_rate,
 				 *true_sig2, *true_tau,
-				 *burn);
+				 *burn, *betaburn);
   }
   else {
 

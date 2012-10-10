@@ -72,7 +72,8 @@ double bridge_regression(MatrixFrame & beta,
 			 double nu_rate,
 			 double true_sig2,  
 			 double true_tau , 
-			 uint burn);
+			 uint burn,
+			 int betaburn=0);
 
 double bridge_regression_stable(MatrixFrame & beta,
 				MatrixFrame & lambda,
@@ -158,7 +159,8 @@ extern "C"
 			 const int *M,
 			 const int *burn,
 			 double *runtime,
-			 const bool *ortho);
+			 const bool *ortho,
+			 const int *betaburn);
 
   void bridge_reg_stable(double *betap,
 			 double *lambdap,

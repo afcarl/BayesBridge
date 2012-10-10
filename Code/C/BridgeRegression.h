@@ -40,6 +40,7 @@
 #include <math.h>
 #include <Eigen/Core>
 #include <Eigen/SVD>
+#include "HmcSampler.h"
 
 #ifdef USE_R
 #include <R_ext/Utils.h>
@@ -68,6 +69,7 @@ class BridgeRegression
   Matrix XX;
   Matrix Xy;
   Matrix XX_sub;
+  Matrix bhat;
 
   Matrix RT;
   Matrix RTInv;
@@ -75,6 +77,14 @@ class BridgeRegression
   Matrix tV;
   Matrix a;
   Matrix d;
+
+  Eigen::MatrixXd F;
+  Eigen::MatrixXd tUy;
+  Eigen::MatrixXd DtV;
+  Eigen::MatrixXd EXX;
+  Eigen::MatrixXd ebhat;
+  
+  Eigen::MatrixXd Fb;
 
  public:
 
@@ -93,6 +103,8 @@ class BridgeRegression
 		    double *ap, double *tVp, double *dp, 
 		    double* bp, double* sig2p, 
 		    int *Pp, RNG& r);
+
+  void rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int niter=1, int seed=0);
 
   void sample_beta(MF beta, const MF& beta_prev, 
 		   const MF& u, const MF& omega, 
@@ -167,6 +179,9 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
   symsqrt(RT, XX);
   syminvsqrt(RTInv, XX);
 
+  bhat.resize(P);
+  least_squares(bhat);
+
   int n = X_.rows();
   int p = X_.cols();
 
@@ -183,6 +198,7 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeFullV);
   Eigen::MatrixXd A = svd.matrixU() * svd.singularValues().asDiagonal();
 
+  // For transforming and then dong truncated normal.
   EtV = svd.matrixV().transpose();
   Ea.resize(p, 1);
   Ed.resize(p, 1);
@@ -202,7 +218,18 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
       tV(i,j) = EtV(i,j);
     }
   }
+
+  // For HMC: We need to have a non-singular precision for this to work.
+  F = svd.singularValues().asDiagonal().inverse() * EtV; // D^{-1} V'
+  DtV = svd.singularValues().asDiagonal() * EtV;
+  tUy = svd.matrixU().transpose() * Eigen::Map<Eigen::MatrixXd>(&y(0), n, 1);
   
+  EXX = Eigen::Map<Eigen::MatrixXd>(&XX(0), p, p);
+  ebhat = Eigen::Map<Eigen::MatrixXd>(&bhat(0), p, 1);
+
+  Fb.resize(2*p, p);
+  Fb.block(0,0,p,p) = Eigen::MatrixXd::Identity(p, p);
+  Fb.block(p,0,p,p) = -1.0 * Eigen::MatrixXd::Identity(p,p);
 
 } // Bridge Regression
 
@@ -404,6 +431,62 @@ void BR::rtnorm_gibbs(double *betap,
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// Hamiltonian Mone Carlo
+void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed)
+{
+  if (seed==0) seed = time(NULL);
+  int d = P;
+  HmcSampler hmc(d, seed);
+  // double sig = sqrt(sig2);
+
+  // Eigen::MatrixXd tFtUy = F.transpose() * tUy;
+
+  // // Set initial value.
+  // Eigen::Map<Eigen::VectorXd> ebeta_prev(&beta_prev(0), d);
+  // Eigen::VectorXd z_init = (DtV * ebeta_prev - tUy) / sig;
+  // hmc.setInitialValue(z_init);
+
+  // // Set constraints.
+  // for (int j=0; j<d; j++) {
+  //   double gj_plus = (b(j) + tFtUy(j)) / sig;
+  //   double gj_mnus = (b(j) - tFtUy(j)) / sig;
+  //   Eigen::VectorXd Fj = F.col(j);
+  //   hmc.addLinearConstraint(Fj, gj_plus);
+  //   hmc.addLinearConstraint(-1.0 * Fj, gj_mnus);
+  //   // double cj = Fj.dot(z_init);
+  //   // printf("cj: %g, gj+: %g, gj-: %g\n", cj, gj_plus, gj_mnus);
+  // }
+
+  // for (int i=0; i<niter-1; i++) {
+  //   hmc.sampleNext(false);
+  // }  
+
+  // // Returns a samples in row format.  I had some problems with this.
+  // Eigen::VectorXd draw = hmc.sampleNext(false);
+  // Eigen::MatrixXd newbeta = F.transpose() * (sig * draw + tUy);
+
+  // New attempt
+  Eigen::MatrixXd prec = EXX / sig2;
+  Eigen::MatrixXd eb   = Eigen::Map<Eigen::MatrixXd>(&b(0), d, 1);
+  Eigen::MatrixXd ebprev = Eigen::Map<Eigen::MatrixXd>(&beta_prev(0), d, 1);
+  Eigen::VectorXd gb(2*d);
+
+  gb.segment(0,d) = eb;
+  gb.segment(d,d) = eb;
+  
+  // std::cerr << "Fb:\n" << Fb << "\n";
+  // std::cerr << "eb:\n" << eb.transpose() << "\n";
+  // std::cerr << "iv:\n" << ebprev.transpose() << "\n";
+
+  Eigen::MatrixXd newbeta = hmc.rtnorm(ebhat, prec, Fb, gb, ebprev, 1, burn, false, seed);
+
+  // std::cout << "newbeta:\n" << newbeta << "\n";
+
+  for(int i=0; i<d; i++)
+     beta(i) = newbeta(i);
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // There are multiple ways one may calculate the conditional distributions of
@@ -453,8 +536,11 @@ void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& 
 
 }
 
-void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
+void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int burn)
 {
+  burn = burn > 0 ? burn : 0;
+  int niter = burn + 1;
+
   Matrix b(P);
   for(uint j=0; j<P; j++)
     b(j) = (1.0 - u(j)) * exp( log(omega(j)) / alpha) * tau;
@@ -469,6 +555,11 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
     // rtnorm_gibbs(beta, bhat, XX, sig2, b, r);
     rtnorm_gibbs_wrapper(beta, sig2, b, r);
   }
+
+  // HMC
+  // rtnorm_hmc(beta, beta_prev, sig2, b, burn, floor(r.unif() * 10000000));
+
+  // Try setting the seed to 0 for all draws.  Look what happens.  Things are off.
 
 } // sample_beta
 
