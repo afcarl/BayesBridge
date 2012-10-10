@@ -1,8 +1,10 @@
 ## Bridge regression using the mixture of triangles formulation.
 
-## library(msm)
+## library("BayesBridge")
+library("msm");
 ## library(mvtnorm)
 ## library(truncnorm)
+library("tmg");
 
 draw.u <- function(tau, beta, w, alpha)
 {
@@ -15,8 +17,8 @@ draw.w <- function(tau, beta, u, alpha)
   p = length(beta)
   a = (abs(beta/tau)/(1-u))^alpha
   pr = alpha/(1-alpha*a)
-  p1 = 0.5*(1+alpha)
-  pr = p1/(1-p1*a)
+  ## p1 = 0.5*(1+alpha)
+  ## pr = p1/(1-p1*a)
   shape = (runif(p) < pr) + 1;
   w = rgamma(p, shape, 1);
   w+a
@@ -37,6 +39,9 @@ draw.sig2 <- function(beta, x, y, sig2.shape=0.0, sig2.scale=0.0)
   prec = rgamma(1, sig2.shape+n/2, rate=sig2.scale+rss/2)
   return(1/prec)
 }
+
+##------------------------------------------------------------------------------
+## Sampling beta
 
 ## Geweke style Gibbs sampling
 draw.beta.1 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
@@ -127,6 +132,31 @@ draw.beta.3 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
   beta = irt %*% z;
 }
 
+## Hamiltonian MCMC
+draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
+{
+  require("tmg")
+  p = length(beta);
+
+  b = (1-u)*{w^(1/alpha)}*tau
+
+  ## Constraints
+  F = matrix(nrow=2*p, ncol=p)
+  F[1:p,1:p]   = diag(1,p)
+  F[1:p+p,1:p] = -1 * diag(1,p)
+  g = as.vector(c(b,b))
+
+  ## print(b)
+  ## print(beta)
+  
+  prec = xx / sig2;
+  ell  = prec %*% bhat;
+
+  out = rtmg(1, prec, ell, beta, F, g, burn.in = 30);
+
+  drop(out)
+}
+
 ################################################################################
 
 bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
@@ -152,12 +182,8 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   beta <- rep(1,p)
   beta <- bhat
   ## tau <- 2
-  w = rep(2,p)
-  u = rep(0,p)
-
-  #beta = bhat + rnorm(1,0,1)
-  #w = 2*abs(beta)
-  #tau=1
+  w = rep(2.0,p)
+  u = rep(0.5,p)
 
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
@@ -182,10 +208,11 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
 
       w <- draw.w(tau, beta, u, alpha)
       u <- draw.u(tau, beta, w, alpha)
-
-      ##beta = draw.beta.1(beta, bhat, xx, sig2, tau, u, w, alpha)
+      
+      ## beta = draw.beta.1(beta, bhat, xx, sig2, tau, u, w, alpha)
       beta = draw.beta.2(beta, a, tV, d, sig2, tau, u, w, alpha)
       ## beta = draw.beta.3(beta, bhat, xx, sig2, tau, u, w, alpha)
+      ## beta = draw.beta.4(beta, bhat, xx, sig2, tau, u, w, alpha);
 
       if(i > burn)
       {
