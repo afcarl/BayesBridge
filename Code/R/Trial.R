@@ -1,4 +1,4 @@
-## Here we try to test whether the MCMCs are, in fact, producing the same results.
+## Here we try to test whether the C++ MCMCs are, in fact, producing the same results.
 
 ## Generates summary statistics.
 sum.stat <- function(gbs, thin=1)
@@ -56,15 +56,16 @@ tau = 0.0
 alpha = 0.5
 ortho=FALSE
 multi = 1;
+bb = 0
  
 tri.list = list()
 stb.list = list()
 ## R.list   = list()
 i = 0
 
-idc = (i+1):(i+2); for (i in idc) {
+idc = (i+1):(i+1); for (i in idc) {
 
-  gb.tri = bridge.reg.tri(y, X, multi*nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn=multi*burn, tau=tau, ortho=ortho)
+  gb.tri = bridge.reg.tri(y, X, multi*nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn=multi*burn, tau=tau, ortho=ortho, betaburn=bb)
   gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn=burn, tau=tau, ortho=ortho)
   ## gb.R   = bridge.tmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, burn=burn, tau=tau, verbose=500);
   
@@ -83,6 +84,7 @@ nr = nrow(tri.list[[1]]);
 nc = ncol(tri.list[[1]]);
 nl = length(tri.list);
 
+## CHECK OUT simplify2array(list)
 tri.array = array(dim=c(nr, nc, nl));
 colnames(tri.array) = colnames(tri.list[[1]]);
 stb.array = tri.array
@@ -95,6 +97,11 @@ for (j in 1:nl) {
 
 apply(tri.array[,1,], 1, mean)
 apply(stb.array[,1,], 1, mean)
+
+## Another option to consider, instead of ESS is to calculate many sample means
+## and then check the standard deviation of the sample means of the components.
+## I'm not sure what assumptions one must make when using ESS.  Something to
+## learn.
 
 ################################################################################
                                  ## APPENDIX ##
