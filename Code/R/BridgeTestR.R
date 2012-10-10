@@ -51,14 +51,13 @@ if (TRUE) {
 
   LS = solve(t(X) %*% X, t(X) %*% y);
 
-  nsamp = 1000
-  burn  = 200
-  tau = 0.0
+  nsamp = 5000
+  burn  = 1000
   tau = 0.0
   alpha = 0.5
 
   out.tri = bridge.tmix.R(y, X, nsamp, alpha=0.5, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=0.0, tau=tau, verbose=50)
+    burn=burn, sig2=0.0, tau=tau, verbose=500)
 
   out.nrm = bridge.nmix.R(y, X, nsamp, alpha=0.5, sig2.shape, sig2.scale, nu.shape, nu.rate,
     burn=burn, sig2=0.0, tau=tau, verbose=500)
