@@ -238,9 +238,9 @@ run.it <- function(y, X, nsamp=1000,  burn=100,
 
   if (print.it) {
     print("tri.stat:")
-    print(info$tri.stat[[ntrials]])
+    print(info$tri.list[[ntrials]])
     print("stb.stat:")
-    print(info$stb.stat[[ntrials]])
+    print(info$stb.list[[ntrials]])
   }
 
   cat("Info size:", object.size(info) / 2^20, "Mb\n")
