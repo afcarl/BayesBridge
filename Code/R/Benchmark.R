@@ -272,12 +272,13 @@ if (run$EFRON) {
   cov.name = colnames(diabetes$x);
   y = diabetes$y;
   X = diabetes$x;
+  n = length(y);
   cnames = cov.name
   
   ## Center things.
   y = y - mean(y);
   mX = colMeans(X);
-  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
 
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
@@ -297,6 +298,7 @@ if (run$BH) {
 
   ## Setup
   y = BostonHousing$medv
+  n = length(y)
 
   ## No interactions or squared terms.
   X = model.matrix(medv ~ ., data=BostonHousing);
@@ -304,7 +306,7 @@ if (run$BH) {
   ## Center things.
   y = y - mean(y);
   mX = colMeans(X);
-  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
   X = X[,-1]
   
   cnames = colnames(X);
@@ -327,6 +329,7 @@ if (run$BHI) {
 
   ## Setup
   y = BostonHousing$medv
+  n = length(y)
 
   ## No interactions or squared terms.
   X = model.matrix(medv ~ ., data=BostonHousing);
@@ -349,7 +352,7 @@ if (run$BHI) {
   ## Center things.
   y = y - mean(y);
   mX = colMeans(X);
-  for(i in 1:442){ X[i,] = X[i,] - mX; }
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
   X = X[,-1]
 
   cnames = colnames(X);

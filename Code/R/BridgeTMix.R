@@ -21,7 +21,8 @@ draw.w <- function(tau, beta, u, alpha)
   ## pr = p1/(1-p1*a)
   shape = (runif(p) < pr) + 1;
   w = rgamma(p, shape, 1);
-  w+a
+  w = w+a
+  list("w"=w, "shape"=shape);
 }
 
 draw.tau <- function(beta, alpha, c, d)
@@ -38,6 +39,30 @@ draw.sig2 <- function(beta, x, y, sig2.shape=0.0, sig2.scale=0.0)
   rss = sum( (as.matrix(y)-x%*%as.matrix(beta))^2 )
   prec = rgamma(1, sig2.shape+n/2, rate=sig2.scale+rss/2)
   return(1/prec)
+}
+
+draw.alpha <- function(alpha, beta, tau, ep=0.1)
+{
+  s = log(abs(beta / tau));
+  a.old = alpha;
+  lb = 0.10
+  ub = 0.90
+  
+  ## We might want to change these bounds if we have some belief about the value
+  ## of alpha.
+  l.new = max(c(lb, a.old-ep))
+  r.new = min(c(ub, a.old+ep))
+  d.new = r.new - l.new
+  a.new = runif(1, l.new, r.new); 
+
+  d.old = min(c(ub, a.new+ep)) -  max(c(lb, a.new-ep))
+  
+  log.accept = - sum(exp(s*a.new)) + sum(exp(s*a.old)) +
+    log(d.old) - log(d.new);
+
+  if (runif(1) < exp(log.accept)) alpha = a.new
+  
+  alpha
 }
 
 ##------------------------------------------------------------------------------
@@ -169,6 +194,7 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
 
   known.sig2 = sig2 > 0
   known.tau  = tau > 0
+  known.alpha = alpha > 0
 
   jsvd = svd(X);
   tV = t(jsvd$v);
@@ -187,12 +213,15 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
 
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
+  if (alpha <=0) alpha = 0.5;
   
-  output <- list(u = matrix(nrow=nsamp, ncol=length(beta)),
-                 w = matrix(nrow=nsamp, ncol=length(beta)),
-                 beta = matrix(nrow=nsamp, ncol=length(beta)),
+  output <- list(u = matrix(nrow=nsamp, ncol=p),
+                 w = matrix(nrow=nsamp, ncol=p),
+                 shape = matrix(nrow=nsamp, ncol=p),
+                 beta = matrix(nrow=nsamp, ncol=p),
                  sig2 = rep(0, nsamp),
-                 tau = rep(0, nsamp)
+                 tau = rep(0, nsamp),
+                 alpha = rep(0, nsamp)
                  )
 
   start.time = proc.time();
@@ -206,21 +235,28 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
 
       if (!known.sig2) sig2 = draw.sig2(beta, X, y, sig2.shape, sig2.scale)
 
-      w <- draw.w(tau, beta, u, alpha)
-      u <- draw.u(tau, beta, w, alpha)
+      ws <- draw.w(tau, beta, u, alpha)
+      w = ws$w
+      shape = ws$shape
       
+      u <- draw.u(tau, beta, w, alpha)
+
       ## beta = draw.beta.1(beta, bhat, xx, sig2, tau, u, w, alpha)
       beta = draw.beta.2(beta, a, tV, d, sig2, tau, u, w, alpha)
       ## beta = draw.beta.3(beta, bhat, xx, sig2, tau, u, w, alpha)
       ## beta = draw.beta.4(beta, bhat, xx, sig2, tau, u, w, alpha);
 
+      if (!known.alpha) alpha = draw.alpha(alpha, beta, tau);
+      
       if(i > burn)
       {
           output$u[i-burn,]    = u
           output$w[i-burn,]    = w
+          output$shape[i-burn,] = shape
           output$beta[i-burn,] = beta
           output$sig2[i-burn]  = sig2
           output$tau[i-burn]   = tau
+          output$alpha[i-burn] = alpha
       }
   }
 

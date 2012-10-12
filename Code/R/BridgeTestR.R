@@ -26,7 +26,7 @@ sum.stat <- function(gbs, thin=1)
 
 ################################################################################
 
-if (TRUE) {
+if (FALSE) {
 
   source("~/RPackage/BayesBridge/Code/R/BridgeTMix.R")
   source("~/RPackage/BayesBridge/Code/R/BridgeNMix.R")
@@ -56,10 +56,10 @@ if (TRUE) {
   tau = 0.0
   alpha = 0.5
 
-  out.tri = bridge.tmix.R(y, X, nsamp, alpha=0.5, sig2.shape, sig2.scale, nu.shape, nu.rate,
+  out.tri = bridge.tmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
     burn=burn, sig2=0.0, tau=tau, verbose=500)
 
-  out.nrm = bridge.nmix.R(y, X, nsamp, alpha=0.5, sig2.shape, sig2.scale, nu.shape, nu.rate,
+  out.nrm = bridge.nmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
     burn=burn, sig2=0.0, tau=tau, verbose=500)
 
   stat.tri = sum.stat(out.tri)
@@ -68,4 +68,23 @@ if (TRUE) {
   stat.tri
   stat.nrm
 
+  ##---------------------------------------------------------------------------
+  ## Looking for multimodality.
+
+  P = ncol(X);
+  bk = 60;
+  
+  for (i in 1:P) {
+    beta.1 = out.tri$beta[out.tri$shape[,i]==1,i]
+    beta.2 = out.tri$beta[out.tri$shape[,i]==2,i]
+    h1 = hist(beta.1, breaks=bk)
+    h2 = hist(beta.2, breaks=bk)
+    ymax=max(c(h1$counts, h2$counts));
+    xmin = min(c(h1$breaks, h2$breaks));
+    xmax = max(c(h1$breaks, h2$breaks))
+    plot(h1, col="#FF000088", ylim=c(0,ymax))
+    plot(h2, col="#0000FF66", add=TRUE)
+    readline("<ENTER>");
+  }
+  
 }
