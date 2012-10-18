@@ -127,7 +127,15 @@ double bridge_regression(MatrixFrame & beta,
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_omega(omega[i], beta[i-1], u[i-1], tau[i](0), alpha, r);
       br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
+      // for (uint k=0; k < omegauburn; k++) { // begin omegauburn
+      // 	br.sample_omega(omega[i], beta[i-1], u[i], tau[i](0), alpha, r);
+      // 	br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha, r);
+      // } // end omegauburn
       br.sample_beta(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r, betaburn, use_hmc);
+      // for (uint k=0; k < betauburn; k++) { // begin betauburn
+      // 	br.sample_u(u[i], beta[i], omega[i], tau[i](0), alpha, r);
+      // 	br.sample_beta(beta[i], beta[i], u[i], omega[i], sig2[i](0), tau[i](0), alpha, r, betaburn, use_hmc);
+      // } // end betauburn
       // You must change indexing if the following is uncommented.
       // if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
       #ifdef USE_R
@@ -430,7 +438,7 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
       if (!know_tau) br.sample_tau_marg(tau[i], beta[i-1], alpha, nu_shape, nu_rate, r);  // Sample tau.
       br.sample_lambda(lambda[i], beta[i-1], alpha, tau[i](0), r);
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
-      br.sample_beta_stable_ortho(beta[i], lambda[i], alpha, sig2[i](0), tau[i-1](0), r);
+      br.sample_beta_stable_ortho(beta[i], lambda[i], alpha, sig2[i](0), tau[i](0), r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
