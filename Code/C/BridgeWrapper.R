@@ -109,7 +109,7 @@ bridge.reg.tri <- function(y, X,
                            nsamp,
                            alpha=0.5,
                            sig2.shape=0.0, sig2.scale=0.0,
-                           nu.shape=0.5, nu.rate=0.5,
+                           nu.shape=2.0, nu.rate=2.0,
                            sig2.true=0.0, tau.true=0.0,
                            burn=500, ortho=FALSE, betaburn=0, use.hmc=FALSE)
 {
@@ -361,7 +361,7 @@ rrtgamma <- function(num=1, shape=1.0, rate=1.0, rtrunc=1.0, scale=1.0/rate)
   
   x = rep(0, num);
 
-  out = .C("rrtgamma_rate", x, shape, rate, rtrunc, as.integer(num));
+  out = .C("rrtgamma_rate", x, shape, rate, rtrunc, as.integer(num), PACKAGE="Bridge");
 
   out[[1]]
 }
