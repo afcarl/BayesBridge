@@ -8,25 +8,29 @@ library("coda")
 ################################################################################
 
 run <- list("EFRON" = FALSE, # Efron's diabetes data
+            "DBI"   = FALSE, # Efron's diabetes data with interactions and squared terms.
             "BH"    = FALSE, # Boston Housing
             "BHI"   = FALSE, # Boston Housing with interactions
-            "NIR"   = FALSE) # NIR
+            "NIR"   = FALSE, # NIR
+            "CC"    = TRUE, # Concrete
+            "CCI"   = TRUE)  # Concrete with interactions
 
 ## Ortogonalizing matrices by QR.
 oth <- list("EFRON" = FALSE,
+            "DBI"   = FALSE,
             "BH"    = FALSE,
             "BHI"   = FALSE)
 
 ## RUN INFO
-nsamp = 10000
-burn = 2000
+nsamp = 100000
+burn = 10000
 alpha = 0.5
-ntrials = 2
+ntrials = 10
 tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
 use.hmc = FALSE
 
-save.it  = FALSE ## Write output to file
+save.it  = TRUE  ## Write output to file
 plot.it  = FALSE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
@@ -249,10 +253,43 @@ run.it <- function(y, X, nsamp=1000,  burn=100,
   print("stb:")
   print(info$stb.info)
 
+  info$n = length(y);
+
   filename = paste("info", name, "RData", sep=".");
   if (save.it) save(info, file=filename, compress=TRUE);
 
   info
+}
+
+##------------------------------------------------------------------------------
+
+table.info <- function(info, colnum=3)
+{
+  n = info$n
+  p = ncol(info$tri.gb$beta)
+  
+  tab = matrix(nrow=2, ncol=7);
+  colnames(tab) = c("n", "p", "Time", "Min", "Med", "Max", "SD");
+
+  tab[,"n"]=n
+  tab[,"p"]=p
+  
+  tri.med = apply(info$tri.stat[,colnum,], 1, median);
+  stb.med = apply(info$stb.stat[,colnum,], 1, median);
+
+  tab[1,"Min"] = min(tri.med);
+  tab[1,"Max"] = max(tri.med);
+  tab[1,"Med"] = median(tri.med);
+  tab[1,"SD" ] = sd(tri.med);
+  tab[1,"Time"] = median(info$tri.info[,"runtime"]);
+
+  tab[2,"Min"] = min(stb.med);
+  tab[2,"Max"] = max(stb.med);
+  tab[2,"Med"] = median(stb.med);
+  tab[2,"SD" ] = sd(stb.med);
+  tab[2,"Time"] = median(info$stb.info[,"runtime"]);
+
+  tab
 }
 
 ################################################################################
@@ -283,6 +320,34 @@ if (run$EFRON) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="efron",
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
+
+}
+
+##------------------------------------------------------------------------------
+## Efron's diabetes data - with interactions and squared terms.
+
+if (run$DBI) {
+
+  if (tau>0) tau = 41
+  
+  ## Load data.
+  ## load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
+  data("diabetes", package="BayesBridge");
+  cov.name = colnames(diabetes$x2);
+  y = diabetes$y;
+  X = diabetes$x2;
+  n = length(y);
+  cnames = cov.name
+  
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
+
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
+                 save.it=save.it, print.it=print.it, plot.it=plot.it, name="DBI",
                  ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
 
 }
@@ -402,6 +467,68 @@ if (run$NIR) {
 
 }
 
+##------------------------------------------------------------------------------
+## Concrete
+
+if (run$CC) {
+
+  if (tau>0) tau   = 0.15
+  
+  concrete = read.csv("Concrete_Data.csv");
+
+  ## Setup
+  y = concrete$Concrete.compressive.strength
+  n = length(y)
+
+  ## No interactions or squared terms.
+  X = model.matrix(Concrete.compressive.strength ~ . - 1, data=concrete);
+
+  ## Center things.
+  y = y - mean(y);
+  mX = apply(X, 2, mean);
+  sX = apply(X, 2, sd);
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
+  
+  cnames = colnames(X);
+
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
+                 save.it=save.it, print.it=print.it, plot.it=plot.it, name="CC",
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)  
+
+}
+
+##------------------------------------------------------------------------------
+## Concrete -- with interactions and squared terms.
+
+if (run$CCI) {
+
+  if (tau>0) tau   = 0.15
+  
+  concrete = read.csv("Concrete_Data.csv");
+
+  ## Setup
+  y = concrete$Concrete.compressive.strength
+  n = length(y)
+
+  ## No interactions or squared terms.
+  X = model.matrix(Concrete.compressive.strength ~ .*. - 1, data=concrete);
+
+  ## Center things.
+  y = y - mean(y);
+  mX = apply(X, 2, mean);
+  sX = apply(X, 2, sd);
+  for(i in 1:n){ X[i,] = X[i,] - mX; }
+  
+  cnames = colnames(X);
+
+  info <- run.it(y, X, nsamp=nsamp, burn=burn,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
+                 save.it=save.it, print.it=print.it, plot.it=plot.it, name="CCI",
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)  
+
+}
+
 ################################################################################
                          ## ORTHOGONAL DESIGN MATRIX ##
 ################################################################################
@@ -431,6 +558,34 @@ if (oth$EFRON) {
   info <- run.it(y, Q, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=TRUE, plot.it=plot.it, name="efron-ortho", ortho=TRUE)
+  
+}
+
+##------------------------------------------------------------------------------
+## Efron - orthogonalized with interactions
+
+if (oth$DBI) {
+
+  if (tau>0) tau = 41;
+  
+  ## Load data.
+  ## load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
+  data("diabetes", package="BayesBridge");
+  y = diabetes$y;
+  X = diabetes$x2;
+
+  ## Center things.
+  y = y - mean(y);
+  mX = colMeans(X);
+  for(i in 1:442){ X[i,] = X[i,] - mX; }
+
+  ## Ortongonalize
+  Q = qr.Q(qr(X))
+  colnames(Q) = c(1:ncol(Q))
+
+  info <- run.it(y, Q, nsamp=nsamp, burn=burn,
+                 alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
+                 save.it=save.it, print.it=TRUE, plot.it=plot.it, name="DBI-ortho", ortho=TRUE)
   
 }
 
