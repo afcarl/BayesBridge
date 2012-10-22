@@ -12,8 +12,8 @@ run <- list("EFRON" = FALSE, # Efron's diabetes data
             "BH"    = FALSE, # Boston Housing
             "BHI"   = FALSE, # Boston Housing with interactions
             "NIR"   = FALSE, # NIR
-            "CC"    = TRUE, # Concrete
-            "CCI"   = TRUE)  # Concrete with interactions
+            "CC"    = FALSE, # Concrete
+            "CCI"   = FALSE)  # Concrete with interactions
 
 ## Ortogonalizing matrices by QR.
 oth <- list("EFRON" = FALSE,
@@ -30,7 +30,7 @@ tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
 use.hmc = FALSE
 
-save.it  = TRUE  ## Write output to file
+save.it  = FALSE  ## Write output to file
 plot.it  = FALSE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
@@ -218,6 +218,24 @@ plot.info <- function(info, cnames, P=ncol(info$tri.gb$beta))
     cat("tri:", mean(info$tri.gb$beta[,i]), sd(info$tri.gb$beta[,i]), "\n");
     cat("stb:", mean(info$stb.gb$beta[,i]), sd(info$stb.gb$beta[,i]), "\n");
     readline("Press Enter...");
+  }
+
+}
+
+hist.info <- function(info, cnames, P=ncol(info$tri.gb$beta), breaks=40)
+{
+  par(mfrow=c(1,1));
+  for (i in 1:P) {
+    beta.1 = info$tri.gb$beta[info$tri.gb$shape[,i]==1,i]
+    beta.2 = info$tri.gb$beta[info$tri.gb$shape[,i]==2,i]
+    h1 = hist(beta.1, breaks=breaks)
+    h2 = hist(beta.2, breaks=breaks)
+    ymax=max(c(h1$counts, h2$counts));
+    xmin = min(c(h1$breaks, h2$breaks));
+    xmax = max(c(h1$breaks, h2$breaks))
+    plot(h1, col="#FF000088", ylim=c(0,ymax), main=cnames[i])
+    plot(h2, col="#0000FF66", add=TRUE)
+    readline("<ENTER>");
   }
 }
 
