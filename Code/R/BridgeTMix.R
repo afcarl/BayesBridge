@@ -16,7 +16,7 @@ draw.w <- function(tau, beta, u, alpha)
 {
   p = length(beta)
   a = (abs(beta/tau)/(1-u))^alpha
-  pr = alpha/(1-alpha*a)
+  pr = alpha/(1+alpha*a)
   ## p1 = 0.5*(1+alpha)
   ## pr = p1/(1-p1*a)
   shape = (runif(p) < pr) + 1;
@@ -49,12 +49,34 @@ draw.sig2 <- function(beta, x, y, sig2.shape=0.0, sig2.scale=0.0)
   return(1/prec)
 }
 
+##------------------------------------------------------------------------------
+
+sig.for.pg <- function(tau, alpha)
+{
+  sig2 = gamma(3/alpha) / (gamma(1/alpha) * tau^2);
+  sqrt(sig2)
+}
+
+mydpgnorm <- function(y, m, tau, alpha, log=FALSE)
+{
+  sig = sig.for.pg(tau, alpha);
+  out = dpgnorm(y, alpha, m, sig);
+  if (log) out = log(out)
+  out
+}
+
+llh.alpha <- function(alpha, s)
+{
+  p = length(s);
+  p * log(alpha) - p * lgamma(1/alpha) - sum(exp(alpha * s))
+}
+
 draw.alpha <- function(alpha, beta, tau, ep=0.1)
 {
   s = log(abs(beta / tau));
   a.old = alpha;
-  lb = 0.01
-  ub = 0.99
+  lb = 0.0
+  ub = 1.0
 
   ## We might want to change these bounds if we have some belief about the value
   ## of alpha.
@@ -65,8 +87,11 @@ draw.alpha <- function(alpha, beta, tau, ep=0.1)
 
   d.old = min(c(ub, a.new+ep)) -  max(c(lb, a.new-ep))
 
-  log.accept = - sum(exp(s*a.new)) + dbeta(a.new, 15, 1.0, log=TRUE) +
-    sum(exp(s*a.old)) - dbeta(a.old, 15, 1.0, log=TRUE) +
+  s.new = tau * a.new^(-1/a.new);
+  s.old = tau * a.old^(-1/a.old);
+  ##log.accept = sum(mydpgnorm(beta, 0, tau, a.new, log=TRUE)) - sum(mydpgnorm(beta, 0, tau, a.old, log=TRUE)) +
+    log.accept = llh.alpha(a.new, s) - llh.alpha(a.old, s) +
+    dbeta(a.new, 1.0, 1.0, log=TRUE) - dbeta(a.old, 1.0, 1.0, log=TRUE) +
     log(d.old) - log(d.new);
   
   if (runif(1) < exp(log.accept)) alpha = a.new
@@ -215,7 +240,8 @@ draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
 ################################################################################
 
 bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
-                          burn=100, sig2=0.0, tau=0.0, verbose=500)
+                          burn=100, sig2=0.0, tau=0.0, verbose=500,
+                          beta.true=NULL, omega.true=NULL)
 {
   X <- as.matrix(X)
   xx <- t(X)%*%X
@@ -225,6 +251,7 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   known.sig2 = sig2 > 0
   known.tau  = tau > 0
   known.alpha = alpha > 0
+  known.beta = !is.null(beta.true)
 
   jsvd = svd(X);
   tV = t(jsvd$v);
@@ -244,6 +271,8 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
   if (alpha <=0) alpha = 0.5;
+
+  if (known.beta) beta = beta.true;
 
   output <- list(u = matrix(nrow=nsamp, ncol=p),
                  w = matrix(nrow=nsamp, ncol=p),
@@ -276,13 +305,13 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
       ## for (k in 1:1) {
       ## u <- draw.u(tau, beta, w, alpha)
       ## beta = draw.beta.1(beta, bhat, xx, sig2, tau, u, w, alpha)
-      beta = draw.beta.2(beta, a, tV, d, sig2, tau, u, w, alpha)
+      if (!known.beta) beta = draw.beta.2(beta, a, tV, d, sig2, tau, u, w, alpha)
       ## beta = draw.beta.3(beta, bhat, xx, sig2, tau, u, w, alpha)
       ## beta = draw.beta.4(beta, bhat, xx, sig2, tau, u, w, alpha);
       ## }
 
       if (!known.alpha) alpha = draw.alpha(alpha, beta, tau);
-      ## print(alpha)
+      ## cat("alpha:", alpha, "\n")
       
       if(i > burn)
         {

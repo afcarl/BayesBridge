@@ -3,7 +3,8 @@
 source("BridgeTMix.R") ## For draw.tau, draw.sig, etc.
 
 bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
-                         burn=100, sig2=0.0, tau=0.0, verbose=500)
+                          burn=100, sig2=0.0, tau=0.0, verbose=500,
+                          beta.true=NULL, lambda.true=NULL)
 {
   require("copula");
 
@@ -16,6 +17,8 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   known.sig2 = sig2 > 0
   known.tau  = tau > 0
   known.alpha = alpha > 0
+  known.beta = !is.null(beta.true)
+  known.lambda = !is.null(lambda.true)
 
   p = ncol(X)
   n = length(y)
@@ -29,6 +32,9 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
   if (alpha<= 0) alpha = 0.5;
+
+  if (known.beta) beta = beta.true
+  if (known.lambda) lambda = lambda.true
   
   output <- list(lambda = matrix(nrow=nsamp, ncol=length(beta)),
                  beta   = matrix(nrow=nsamp, ncol=length(beta)),
@@ -49,26 +55,31 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
       
       ## tau -- marginalized draw.
       if (!known.tau) tau = draw.tau(beta, alpha, nu.shape, nu.rate)
-
+      ## cat("tau:", tau, "\n");
+      
       ## sig2
       if (!known.sig2) sig2 = draw.sig2(beta, X, y, sig2.shape, sig2.scale)
 
       ## lambda
-      for(j in 1:p)
-        lambda[j] = 2 * retstable(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
+      if (!known.lambda) {
+        for(j in 1:p)
+          lambda[j] = 2 * retstable(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
+      }
 
       ## beta
-      VInv = (xx + diag(lambda * sig2 / tau^2, p));
-      V = solve(VInv);
-      U = chol(V) * sqrt(sig2);
-      m = V %*% xy;
-      beta = drop(m + t(U) %*% rnorm(p))
-
+      if (!known.beta) {
+        VInv = (xx + diag(lambda * sig2 / tau^2, p));
+        V = solve(VInv);
+        U = chol(V) * sqrt(sig2);
+        m = V %*% xy;
+        beta = drop(m + t(U) %*% rnorm(p))
+      }
+      
       ## alpha
       if (!known.alpha) alpha = draw.alpha(alpha, beta, tau);
-      ## print(alpha)
+      ## cat("alpha:", alpha, "\n");
       
-      if(nsamp > burn)
+      if(i > burn)
         {
           output$beta[i-burn,]   = beta
           output$lambda[i-burn,] = lambda

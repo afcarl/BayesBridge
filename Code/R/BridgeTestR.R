@@ -39,6 +39,7 @@ if (FALSE) {
   nu.shape = 2.0
   nu.rate  = 2.0
 
+  ## Diabetes
   load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
   cov.name = colnames(diabetes$x);
   y = diabetes$y;
@@ -49,18 +50,52 @@ if (FALSE) {
   mX = colMeans(X);
   for(i in 1:442){ X[i,] = X[i,] - mX; }
 
+  ## Synthetic 1
+  n = 10
+  A <- matrix(c(1.0, 0.95, 0.95,
+                0.95, 1.0, 0.95,
+                0.95, 0.95, 1.0), byrow=TRUE, nrow=3);
+  U = chol(A);
+  z = matrix(rnorm(n*3), nrow=3, ncol=20);
+  X = t( t(U) %*% z );
+
+  beta.synth = c(3, 3, 3);
+  sig2.synth = 1.0
+
+  y = X %*% beta.synth + sig2.synth * rnorm(n);
+  
+  ## Synthetic 2
+  n = 1000
+  p = 500
+  ## A = matrix(0.9 * runif(p*p), ncol=p, nrow=p);
+  ## A = 0.5 * (A + t(A)); diag(A) = 1.0
+  A = matrix(0.3, ncol=p, nrow=p); diag(A) = 1.0
+  U = chol(A);
+  z = matrix(rnorm(n*p), nrow=n, ncol=p);
+  X = z %*% U;
+
+  tau.syn = 1.0
+  sig2.syn = 1.0
+  alpha.syn = 0.9
+  ## You can't generate data this way--marginal isn't stable it is polynomial tilted stable.
+  ## for(i in 1:p) lambda.syn[i] = 2 * retstable(0.5 * alpha.syn, 1.0, 0.0, method="LD");
+  ## beta.syn = rnorm(p, 0.0, tau.syn / sqrt(lambda.syn));
+  beta.syn = rpgnorm(p, alpha.syn, 0.0, sig.for.pg(tau.syn, alpha.syn))
+
+  y = X %*% beta.syn + sig2.syn * rnorm(n);
+  
   LS = solve(t(X) %*% X, t(X) %*% y);
 
   nsamp = 5000
-  burn  = 1000
+  burn  = 2000
   tau = 0.0
   alpha = 0.5
 
   out.tri = bridge.tmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=0.0, tau=tau, verbose=500)
+    burn=burn, sig2=sig2.syn, tau=0.0, verbose=500, beta.true=beta.syn)
 
   out.nrm = bridge.nmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=0.0, tau=tau, verbose=500)
+    burn=burn, sig2=sig2.syn, tau=0.0, verbose=500, beta.true=beta.syn) 
 
   stat.tri = sum.stat(out.tri)
   stat.nrm = sum.stat(out.nrm)
