@@ -41,12 +41,13 @@ int main(int argc, char** argv)
 
   Matrix u    (P, 1, M, 0.0);
   Matrix omega(P, 1, M, 2.0);
+  Matrix shape(P, 1, M, 0.0);
 
   Matrix sig2((uint)1, (uint)1, M);
   Matrix tau ((uint)1, (uint)1, M);
 
-  // bridge_regression(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100, 30, false);
-  bridge_regression_ortho(beta, u, omega, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
+  bridge_regression(beta, u, omega, shape, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100, 30, false);
+  //bridge_regression_ortho(beta, u, omega, shape, sig2, tau, y, X, alpha, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, 100);
   
   Matrix lambda(N, (uint)1, M);
 
