@@ -267,11 +267,11 @@ rtnorm.both <- function(num=1, left=-1.0, right=1.0, mu=0.0, sig=1.0)
         return(NA);
     }
     if (sum(LGER)!=0) {
-      print("left must be less than right.");
+      print("rtnorm: left must be less than right.");
       return(NA);
     }
     if (! (num>0) ) {
-      print("num must be greater than zero.");
+      print("rtnorm: num must be greater than zero.");
       return(NA);
     }
 
