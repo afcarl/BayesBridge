@@ -4,6 +4,9 @@
 \usepackage{parskip}
 \usepackage{natbib}
 
+\newcommand{\floor}[1]{\lfloor #1 \rfloor}
+\newcommand{\ceil}[1]{\lceil #1 \rceil}
+
 % Page Layout
 \setlength{\oddsidemargin}{0.0in}
 \setlength{\textwidth}{6.5in}
@@ -19,12 +22,11 @@
 
 \begin{document}
 
+\tableofcontents
+
 % Change Font and Spacing
 \large % change the font size to 12pt
 % \linespread{1.1} % change the line spacing
-
-% Set the counter
-\setcounter{section}{0}
 
 \section{Regarding the mixture of Betas}
 
@@ -140,7 +142,7 @@ described by
 G(x/k) = \sum_{i=0}^k \frac{(-1)^i}{i!} x^i F^{(i)} (x).
 \]
 
-\section{Expectation Maximization}
+\section{Expectation Maximization Refresher}
 
 Again, I need to remind myself about the EM algorithm.  It is worth reading
 \cite{dempster-etal-1977}.  They motivate their work using exponential families.
@@ -190,7 +192,7 @@ The $H$ term is idential and thus possesses the same property, but now we have
 Q(\theta | \theta^p) = \bbE[ \ln p(\theta, \omega | y) | \theta^p, y ].
 \]
 
-\section{Bridge Regression with triangles}
+\section{Regarding EM for BR with triangles}
 
 Regarding bridge regression by augmentation: the prior can be prepresnted as
 \[
@@ -290,7 +292,7 @@ I'm not sure how you calculate
 Looking at James and Nick's paper though it appears that they actually use the
 normal scale-mixture of stable distributions for the EM.
 
-\section*{Mixture of Normals MCMC}
+\section{Mixture of Normals MCMC}
 
 If we let $S_\alpha$ be the stable distribution with parameter $\alpha$,
 following the notation of \cite{devroye-2009}, then as found on p. 1 of his
@@ -348,6 +350,8 @@ or
 + \frac{-1}{2 \tau^2} \beta' \Lambda \beta \Big\} \prod_{i=1}^p p(\lambda_i).
 \]
 
+\subsection{Sampling $p(\lambda | \beta, \sigma^2, y)$}
+
 You can see from the first expression that
 \[
 p(\lambda_i | \beta, y) \propto \exp(- \frac{\beta_i^2}{2 \tau^2} \lambda_i) p(\lambda_i).
@@ -362,9 +366,11 @@ x_i \sim \texttt{retstable}(\gamma / 2, 1.0, \beta_i^2 / \tau^2)
 \]
 and $\lambda_i = 2 x_i$.
 
+\subsection{Sampling $p(\beta | \lambda, \sigma^2, y)$}
+
 The posterior for $\beta$ is
 \[
-p(\beta | y, \lambda) \propto
+p(\beta | y, \lambda, \sigma^2) \propto
 \exp \Big\{ \frac{-1}{2 \sigma^2} \Big( \beta' (X'X + \frac{\sigma^2}{\tau^2}
 \Lambda) \beta - 2 \beta' X' y \Big) \Big\}.
 \]
@@ -377,11 +383,13 @@ and the mean $m$ solves
 X'y = \sigma^2 V^{-1} m.
 \]
 
+\subsection{Sampling $p(\sigma^2 | \beta, \lambda, y)$}
+
 If we use an inverse-gamma prior for $\sigma^2$,
 \[
 p(\sigma^2) \sim IG(\text{shape}=a/2, \text{scale}=b/2)
 \]
-then the posterior for $\sigma^2$ is
+then the posterior for $\sigma^2$ is  ($\tau$ is independent of $\sigma^2$ conditional upon $\beta$)
 \[
 p(\sigma^2 | y, \beta) \sim IG(\text{shape}=a^*/2, \text{scale}=b^*/2)
 \]
@@ -389,6 +397,30 @@ where $a^* = a + n$ and $n$ is the nubmer of observations and
 \[
 b^* = ||y - X \beta||^2 + b.
 \]
+
+\subsection{Sampling $p(\tau | \beta, \lambda, y)$}
+
+First, note that neither $y$ nor $\sigma^2$ affects $\tau$ given $\beta$.  In
+fact, we only need to focus on the prior.  In particular, from our work above we
+have that
+\[
+\ell(\tau | \beta, \lambda) \propto \exp \Big( -\frac{1}{2} \frac{1}{\tau^2}
+\sum_{i=1}^p \beta_i^2 \lambda_i \Big).
+\]
+Thus if $\tau^2$ has an $IG(a, \text{scale}=b)$ prior then the posterior is $IG(a^*,
+b^*)$ where $a^* = a$ and 
+\[
+b^* = b + \frac{1}{2} \sum_{i=1}^p \beta_i^2 \lambda_i.
+\]
+Thus to sample from the posterior of $\tau^2$ we may do
+\[
+\begin{cases}
+\phi \sim Ga(a^*, \text{rate}=b^*) \\
+\tau = \sqrt{1/\phi}.
+\end{cases}
+\]
+Note that the liklihood does not generate a probability density so we need to
+use a proper prior.
 
 \section{Mixture of Triangles MCMC}
 
@@ -579,10 +611,52 @@ helps us out.
 
 We can also calculate the min and the max on the fly.
 
-\subsection*{Sampling $\tau$}
+\subsection*{Sampling $p(\tau | \beta, \sigma^2, u, \omega, y)$}
 
-I need to derive the correct posterior for $\tau$.  It should be truncated.
-This is wrong in the current code.
+First, note that we want to sample $\tau$ given everything else.  In James' and
+Nick's notes they sample $\tau$ without $\omega$ and $u$.  I think it is okay to
+do this so long as you sample $\omega$, $u$, and $\beta$ in the same block, but
+I need to check that.  Part of the problem with that approach though is that the
+prior you will use in the stable model is different from the prior you will use
+for that marginal draw.  If you condition on everything then you may use the
+same prior as in the stable case, but it must be proper as the liklihood for
+$\tau$ does not form a valid density.
+
+In particular, the likelihood for $\tau$ given everything else is
+\[
+\ell(\tau | \beta, u, \omega) \propto = \frac{1}{\tau} 
+\prod_{j=1}^p \one \Big\{ \frac{|\beta_j|}{(1-u_j) \omega_j^{1/\alpha}} \leq \tau \Big\}.
+\]
+Let
+\[
+m = \max_j \frac{|\beta_j|}{(1-u_j) \omega_j^{1/\alpha}}.
+\]
+In the stable case we gave $\tau^2$ an inverse gamma prior.  If we do the same
+thing here we have
+\[
+p(\tau^2 | \beta, u, \omega) \propto (\tau^2)^{-a - 1/2 - 1} \exp ( - b / \tau^2)
+\one \{\tau > m\}.
+\]
+I believe, that if we do a change of variables $\phi = 1/\tau^2$ then we get
+\[
+p(\phi | \beta, u, \omega) \propto \phi^{a+1/2-1} \exp(-b \phi) \one \{\phi < 1/m^2\}.
+\]
+Thus we could draw from the conditional posterior of $\tau$ by
+\[
+\begin{cases}
+\phi \sim Ga(a+1/2, b) \one_{(0, 1/m^2)} \\
+\tau = \sqrt{ 1/\phi }.
+\end{cases}
+\]
+
+On another note, if we look at the likelihood marginally, without $u$, we see
+that
+\[
+p(\tau | \beta, \omega) = \frac{1}{\tau^2} 
+\prod_{j=1}^p \Big( \tau - \frac{|\beta_j|}{\omega_j^{1/\alpha}} \Big)_+.
+\]
+I suppose we don't gain that much here.  This is actually pretty complicated
+since we have a product of linear functions of $\tau$.
 
 \section{Misc}
 
@@ -620,79 +694,416 @@ in terms of time.
 As I get samples of the auxiliary variable in the uniform case, I can use those
 to adjust my ``pool'' of samples that I have stored.
 
-\section{Benchmarking}
+\section{RIght Truncated Gamma Distribution}
+
+The paper by \cite{philippe-1997} shows how to sample a right truncated gamma
+distribution.  However, I think we can do a better job.  She shows that a right
+truncated gamma distribution can be written as an infinite mixture of beta
+distributions.  Her suggestion is to use a truncation of that infinite mixture
+as a proposal for an accept/reject algorithm.  However, one need not do
+accept/reject, instead one may draw from the infinite mixture directly, which we
+discuss below.  We will examine the case when the right truncation is at $t=1$,
+since one can always rescale the random variable so that is the case.  The
+parameterization we use will always be in terms of the rate of a gamma
+distribution.
+
+As shown by Philippe, the right truncated gamma distribution, $Ga(a,b,1)$ can be
+written as an infinite mixture of betas.  To see this consider the truncated
+gamma density
+\[
+f^-(x|a,b) = \frac{b^a \exp(-b)}{\gamma(a,b)} \exp(b(1-x))x^{a-1} \one_{x\leq 1}.
+\]
+The function $\gamma(a,b)$ is the incomplete gamma function
+\[
+\gamma(a,b) = \int_0^b x^{a-1} e^{-x} dx = b^a \int_0^1 x^{a-1} e^{-bx} dx.
+\]
+Note that
+\[
+\texttt{pgamma(b,a,rate=1) = pgamma(1,a,rate=b)} =: C(a,b)
+\]
+and
+\[
+C(a,b) \; \Gamma(a) = \gamma(a,b).
+\]
+
+Use the Taylor expansion of the exponential to write
+\[
+\exp(b(1-x)) 
+= \sum_{k=0}^\infty \frac{b^k}{k!} (1-x)^k 
+= \sum_{k=1}^\infty \frac{b^{k-1}}{(k-1)!} (1-x)^{k-1}. 
+\]
+Thus we can write the density as
+\begin{align*}
+f^-(x|a,b) 
+& = \frac{b^a \exp(-b)}{\gamma(a,b)} 
+\sum_{k=1}^\infty \frac{b^{k-1}}{\Gamma(k)} (1-x)^{k-1} x^{a-1} \one_{x \leq 1}
+\\
+& = \frac{b^a \exp(-b)}{\gamma(a,b)} 
+\sum_{k=1}^\infty \frac{b^{k-1}}{\Gamma(k)} 
+\frac{\Gamma(a) \Gamma(k)}{\Gamma(a+k)}
+\frac{(1-x)^{k-1} x^{a-1}}{\beta(a,b)} \one_{x \leq 1} \\
+& = \sum_{k=1}^\infty w_k f_k(x).
+\end{align*}
+where $f_k(x)$ is the $\beta(a,k)$ distribution and the weights are
+\[
+w_k = \frac{\exp(-b)}{C(a,b)} \frac{b^{a+k-1}}{\Gamma(a+k)}.
+\]
+
+\subsection{A few useful quantities}
+
+Since we started with a distribution these weights must sum to one.  Thus
+\[
+\sum_{k=1}^\infty \frac{e^{-b} b^{k+a}}{\Gamma(a+k)} = C(a,b).
+\]
+Let's call
+\[
+p(k,b,a) = \frac{e^{-b} b^{k+a}}{\Gamma(a+k)};
+\]
+when $a$ is an integer we can interpret
+\[
+\frac{e^{-b} b^{k+a}}{\Gamma(a+k)}
+\]
+as the kernel of a truncated Poisson distribution for $j=a+k > a$.  Thus the
+first $N$ terms of the sum contribute weight
+\begin{align*}
+\sum_{k=1}^N w_k 
+& = \frac{1}{C(a,b)} 
+\Big[ \sum_{k=1}^\infty p(k,b,a) - \sum_{k=N+1}^\infty p(k,b,a) \Big] \\
+& = \frac{C(a,b) - C(a+N,b)}{C(a,b)} = 1 - C(a+N,b) / C(a, b).
+\end{align*}
+
+\subsection{Sampling a $Ga(a,b) \one \{x \leq 1\}$ distribution}
+
+\textbf{Mixture of Betas}: The algoirthm is now straightforward.  To draw from
+the mixture sample, first sample $k \sim \{w_k\}$.  Then sample $x \sim
+\beta(a,k)$.  You can sample $k$ by sampling $u \sim \mcU(0,1)$ and then
+\begin{verbatim}
+k = 1;
+cdf = w(1,a,b);
+while(u > cdf)
+  cdf += w(++k, a, b);
+\end{verbatim}
+Further we know that the probability of needing to calculate $N$ or fewer terms
+is
+\[
+1 - C(a+N,b) / C(a,b).
+\]
+
+\textbf{Rejection:} If one simply does rejection sampling, i.e. draw $x \sim
+Ga(a,b)$ until $x < 1$, then the probability of acceptance is $C(a,b)$.
+
+I'm not sure how to judge just where one should make a trade-off here.  In terms
+of GPU's the first is nice because it is a deterministic procedure.  But I have
+no idea whether it is faster to sum 100 terms or sample 10 Gammas, for instance.
+Suppose that the probability of acceptance is $\alpha$, then the expected number
+of samples before accepting is (from negative binomial) $1/\alpha$.
+Furthermore, it appears, looking at the \texttt{aster} package documentation
+that one can calculate the expected value of a left truncated Poisson
+distribution, which will let us calculate
+\[
+\sum_{k=1}^\infty k \frac{e^{-b} b^{k+a}}{\Gamma(k+a)}
+\]
+(use $k = k + a - a$).  Thus for each method we should be able to calculate the
+expected number of proposals or the expected number of terms to sum.  We can
+then compare those numbers to decide which method to use.
+
+Another option, presuming we can use the quantile function.  We can calculate
+$n$ so that $P(N_i \leq n) \geq 0.9$ or whatever where $N_i$ is the number of
+proposals in the rejection scheme and then take $N = \gamma n$, where we scale
+things up appropriately, and then calculate $1 - C(a+N,b) / C(a,b)$ to get the
+probability we would use no more than $N$ terms in the sum.  Really though, we
+should calculate the probability that we get the correct value within $[N, 2N]$
+against the next batch of proposals.
+
+Or we could show that one distribution dominates the other.
+
+Another idea: Philippe, I think, uses the first $N$ terms.  It would be a better
+idea to use a finite mixture centered at the terms with the most mass.
+
+Another things to think about: One knows the mode of a Poisson distribution,
+hence we at least can tell if the weights are decreasing or not.  In fact, in
+reference to the last idea, we can center the finite mixture starting at the
+weight associated with the mode.  The mode is related to the mean parameter
+$\lambda$, which in this case is $b$.  For a non-truncated Poisson, the mode is
+$\floor{b}$ and $\ceil{b}-1$.  (I gues the Poisson has two adjascent points at
+the the maximum when $b$ is an integer.)  Thus if $\ceil{b}-1 \leq a$, then you
+know things will be decreasing (when the first $k$ is at or above the lowest
+mode).  (I am assuming that to the right of the mode a Poisson is decreasing.)
+
+\section{Choosing $\alpha$}
+
+We can include a Metropolis-Hastings step to model $\alpha$.  The likelihood for
+$\alpha$ is 
+\[
+\prod_{i=1}^p \exp \Big( - |\beta_i / \tau|^\alpha \Big).
+\]
+Let $z_i = |\beta_i / \tau|$ and let $s_i = \log z_i \iff z_i = e^s_i$.  Then we
+have
+\[
+\prod_{i=1}^p \exp \Big( - (e^{s_i})^{\alpha} \Big) = \exp \Big( - \sum_{i}
+e^{\alpha s_i} \Big).
+\]
+The support of $\alpha$ is $[0,1]$ or $[0,2]$ or something like that, so this
+actually defines a valid distribution and we don't need to pick a specific
+posterior.  But we could do so.  And since we will be doing MH it really doesn't
+matter what it is.
+
+Our target distribution will be 
+\[
+q(\alpha) = \ell(\alpha) p(\alpha).
+\]
+
+Our proposal will be a simple random walk.  Pick some radius $\ep$.  Given a
+centering point $y$, let $l = \max \{0, y-\ep\}$ and $r = \min \{1,y+\ep\}$.
+Then the proposal $g(x|y)$ is
+\[
+\frac{1}{r-l} \one_{(l,r)}(x).
+\]
+We know, whenever drawing $x \sim g(x|y)$ that $y$ will be in the support of
+$g(y|x)$.  But the two intervals may be different lenghts.  Thus we will need to
+calculate $r(y)-l(y)$ and $r(x)-l(x)$.  The two intervals are guarenteed to
+overlap since $x \in (y-\ep, y+\ep) \implies y \in (x-\ep, x+\ep$.  Thus the
+transition will be
+\[
+\log g(x|y) = - \log (r(y) - l(y)).
+\]
+
+Thus the log acceptance rate will be
+\[
+\log q(\alpha^{new}) - \log g(\alpha^{new} | \alpha^{old}) - \log
+q(\alpha^{old}) + \log g(\alpha^{old} | \alpha^{new}).
+\]
+Which is
+\begin{align*}
+& - \sum_{i} e^{\alpha^{new} s_i} + \sum_{i} e^{\alpha^{old} s_i} \\
+& p(\alpha^{new}) - p(\alpha^{old}) \\
+& + \log(r(\alpha^{old}) - l(\alpha^{old})) - \log(r(\alpha^{new}) - l(\alpha^{new})).
+\end{align*}
+We exponentiate that and then is to check if we accept.
+
+\newpage
+
+\section{Empirical Benchmarks}
 
 \begin{table}
 \centering
 \begin{tabular}{c c c c c c c c c}
-Method & Data set & $n$ & $p$ & Time (s) & Ave. ESS & SD ESS & Ave. ESR & SD ESR \\
-Tri. & BHI & 506 & 103 & 15.39 & 258  &  291 &    17 &  19 \\
-Stb. & --- & --- & --- & 19.56 & {\bf 5730} & 2681 & {\bf 293} & 137 \\
+Method & Data set & $n$ & $p$ & Time (s) & Min. & Med. & Max. & SD \\
+\hline 
+\multicolumn{9}{c}{Effective Sample Size} \\
+Tri. & DB  & 442 &  10 & 1.51 &  9744.17 & 16583.07 & 45168.14 & 10901.50 \\
+Nrm. & --- & --- & --- & 4.80 & 28727.55 & 54360.66 & 98428.62 & 24566.58 \\
 
-Tri. & BH  & 506 & 13  &  0.22 & 4036 & 1888 & {\bf 18278} & 8550 \\ 
-Stb. & --- & --- & --- &  0.61 & {\bf 6615} & 2488 & 10887 & 4094 \\
+Tri. & DBI & 442 &  64 & 45.12 &   227.78 &   674.99 &  1582.25 &   232.56 \\
+Nrm. & --- & --- & --- & 68.68 & 17924.24 & 60873.07 & 91261.17 & 18936.41 \\
 
-Tri. & DBT & 442 & 10  &  0.15 & 1978 & 1089 & {\bf 12978} & 7144 \\
-Stb. & --- & --- & --- &  0.49 & {\bf 5989} & 2306 & 12152 & 4679 \\
+Tri. & BH  & 506 & 13  & 2.20 & 6513.61  & 46608.98 & 84133.99 & 20934.68 \\
+Nrm. & --- & --- & --- & 5.96 & 17264.82 & 78399.25 & 95152.98 & 23210.93 \\
 
-\multicolumn{9}{c}{Orthogonalized Design Matrix} \\
+Tri. & BHI & 506 & 103 & 155.64 & 2.03 & 911.44 & 7781.48 & 1463.49 \\
+Nrm. & --- & --- & --- & 197.59 & 2063.76 & 49393.23 & 100000.00 & 26360.37 \\
 
-Tri. & BHI & 506 & 103 &  1.62 & 6435 & 1814 &  {\bf 3975} & 1120 \\
-Stb. & --- & --- & --- &  4.17 & {\bf 7690} & 1676 &  1844 &  402 \\
+\multicolumn{9}{c}{Effective Sampling Rate} \\
 
-Tri. & BH  & 506 & 13  &  0.16 & 7972 &  930 & {\bf 49561} & 5782 \\ 
-Stb. & --- & --- & --- &  0.56 & {\bf 9429} &  794 & 16821 & 1416 \\
+Tri. & DB  & 442 &  10 & 1.51 & 6412.15 & 10979.52 & 29850.64 & 7212.68 \\
+Nrm. & --- & --- & --- & 4.80 & 6006.14 & 11312.78 & 20522.83 & 5118.33 \\
 
-Tri. & DBT & 442 & 10  &  0.12 & 7026 & 1203 & {\bf 57915} & 9918 \\
-Stb. & --- & --- & --- &  0.41 & {\bf 8644} & 1059 & 20876 & 2558 \\
+Tri. & DBI & 442 & 64  & 45.12 &   5.06 &  14.98 &   35.10 &   5.16 \\
+Nrm. & --- & --- & --- & 68.68 & 261.86 & 886.12 & 1320.26 & 276.42 \\
+
+Tri. & BH  & 506 &  13 & 2.20 & 2964.45 & 21143.06 & 38401.99 & 9539.13 \\
+Stb. & --- & --- & --- & 5.96 & 2891.94 & 13226.10 & 15957.42 & 3901.12 \\
+
+Tri. & BHI & 506 & 103 & 155.64 & 0.01 & 5.80 & 49.99 & 9.40 \\
+Nrm. & --- & --- & --- & 197.59 & 10.47 & 251.02 & 510.97 & 133.55 
 
 \end{tabular}
+\caption{
+  Tri. refers to the mixture of triangles method and Nrm. refers to the precision
+  mixture of normals method.  DB refers to the diabetes data found in Efron's
+  LARS package, DBI refers to the diabetes data with interactions and squared
+  terms included, BH refers to the Boston Housing data, and BHI refers to the
+  Boston Housing data with interactions and squared terms.  For each dataset, we
+  ran 10 simulations of 100,000 samples each after an initial burn-in of 10,000.
+  We calculated the average effective sample size of each componenent of $\beta$
+  over the 10 runs.  Above we report the minimum, median, mean, and maximum of the
+  componenent averages.  We implemented this code as a C routine wrapped inside
+  an R package.  The tests were carried out using a MacBook Pro with 8GB of RAM and a 2 GHz Intel Core i7
+  processor.  The exponentially stilted stable distributions were sampled using
+  Luc Devroye's algorithm using code from the \texttt{copula} package.  Time refers to
+  the execution time of our code while $n$ is the number of observations and $p$
+  is dimension of $\beta$.
+}
+\label{tab:general}
 \end{table}
 
-Tri. refers to the mixture of triangles method and Stb. refers to the precision
-mixture of normals method.  BHI refers to the Boston Housing data with
-interactions and squared terms, BH refers to the Boston Housing data without any
-additional terms, and DBT refers the the diabetes data found in Efron's LARS
-package. For each data set and each method, 10,000 samples of $\beta$ were
-generated after an initial burn-in of 2,000.  The parameter $\sigma^2$ was given
-a Jeffrey's prior while the prior for $\tau = \nu^{-1/\alpha}$ was induced by
-placing a $\textmd{Ga}(2, \textmd{rate}=2)$ prior on $\nu$.  We calculated the
-effective sample size for each component of $(\beta_i)_{i=1}^p$ and summarized
-the results via the mean and standard deviation.  This process was repeated 10
-times; the mean quantities are recorded above.  We report the same results for
-the effective sampling rate, which is the effective sample size per second of
-run time.  Time is the execution time of our code while $n$ is the number of
-observations and $p$ is dimension of $\beta$.  The code was written using a C++
-wrapper function called through R using a MacBook Pro with 8GB of RAM and a 2
-GHz Intel Core i7 processor.  The exponentially stilted stable distributions
-were sampled using Luc Devroye's algorithm using code from the \texttt{copula}
-package.
+\begin{table}
 
-In addition to the general regression setting, we benchmarked posterior
-simulation for each method when the design matrix is orthongonal.  In that case,
-one may sample from the truncated multivariate Gaussian distribution $(\beta |
-y, \ldots)$ very quickly when using the mixture of triangles method.  For a fair
-comparison we also implemented a special routing to sample from $(\beta | y,
-\ldots)$ that takes advantage of the structure of the problem.
+\centering
+\begin{tabular}{c c c c c c c c c}
+Method & Data set & $n$ & $p$ & Time (s) & Min. & Med. & Max. & SD \\
+\hline
+\multicolumn{9}{c}{Effective Sample Size} \\
+Tri. & DB  & 442 &  10 & 1.20 & 56884.02 & 67798.11 & 95013.04 & 11393.50 \\
+Nrm. & --- & --- & --- & 4.06 & 64337.74 & 83198.38 & 97460.85 & 10473.23 \\
 
-The stable method always has a better effective sample size; however, the
-mixture of triangles consistently has better effective sampling rates, which is
-the speed at which effective samples are generated.  In the orthogonal setting,
-the mixture of triangles method is more competitive in terms of effective sample
-size and superior in terms of effective sampling rate. We take this to be
-evidence that the mixture of triangles may in some situations generate effective
-samples more quickly than the precision mixture of normals.  However, there are
-two caveats to this conclusion.  First, this is an aggregate measure and does
-not consider the variation in the effective sample sizes of the components of
-$\beta$.  Second, the effective sampling rate is a rather imprecise quantity
-since there are many factors that could affect the speed at which an algorithm
-runs.  The language, implementation, compiler options (when working in C, C++,
-or Fortran), and hardware all play a part in determining the runtime.  The above
-analysis does not examine these components of variation in the effective
-sampling rate; however, we did do our best to ensure that both the mixture of
-triangles method were compared on equal footing.  Ultimately, the effective
-sampling rates reported above are specific to the \texttt{BayesBridge} R package
-that we used to benchmark both methods.
+Tri. & DBI & 442 &  64 &  8.69 & 20692.11 & 66531.77 & 100000 & 24770.91 \\
+Nrm. & --- & --- & --- & 25.30 & 32037.12 & 76789.69 & 100000 & 20687.61 \\
+
+Tri. & BH  & 506 &  13 &  1.62 & 59568.85 & 80129.11 & 100000 & 9164.54 \\
+Nrm. & --- & --- & --- &  5.49 & 71694.94 & 96233.52 & 100000 & 7921.34 \\
+
+Tri. & BHI & 506 & 103 & 16.22 & 42410.38 & 61372.62 & 100000 & 17878.59 \\
+Nrm. & --- & --- & --- & 40.95 & 54745.48 & 76084.61 & 100000 & 16436.01 \\
+
+\multicolumn{9}{c}{Effective Sampling Rate} \\
+
+Tri. & DB  & 442 &  10 & 1.20 & 47343.30 & 56407.57 & 79058.63 & 9447.09 \\
+Nrm. & --- & --- & --- & 4.06 & 15842.58 & 20500.59 & 23991.48 & 2581.22 \\
+
+Tri. & DBI & 442 &  64 &  8.69 & 2377.19 & 7675.35 & 11531.89 & 2848.33 \\
+Nrm. & --- & --- & --- & 25.30 & 1267.65 & 3029.24 &  3965.43 &  817.16 \\
+
+Tri. & BH  & 506 &  13 &  1.62 & 36737.37 & 49559.42 & 61921.02 & 5711.95 \\
+Nrm. & --- & --- & --- &  5.49 & 13048.85 & 17533.47 & 18198.85 & 1449.82 \\
+
+Tri. & BHI & 506 & 103 & 16.22 & 2616.17 & 3777.34 & 6171.82 & 1102.28 \\
+Nrm. & --- & --- & --- & 40.95 & 1339.81 & 1857.94 & 2441.98 &  400.95 
+
+\end{tabular}
+\caption{ We repeat the procedure described in Table \ref{tab:general} for the
+  same datasets, but using a different coordinate system in which the design matrix
+  is orthogonal.  When the design matrix is orthogonal it is easy to sample a
+  joint draw the truncated multivaiate normal distribution found in the mixture
+  of triangles method.}
+\label{tab:ortho}
+\end{table}
+
+We benchmark the mixture of triangles method against the mixture of normals
+method to empirically assess each approach.  We use the diabetes dataset found
+in the \texttt{LARS} package and the Boston housing dataset found in the
+\texttt{mlbench} package.  For each data set we consider both a regression with
+all of the predictors and all of the predictors plus interactions and squared
+terms.  Throughout $\sigma^2$ was given a Jeffrey's prior, the prior for $\tau =
+\nu^{-1/\alpha}$ was induced by placing a $\textmd{Ga}(2, \textmd{rate}=2)$
+prior on $\nu$, and $\alpha = 0.5$.
+
+For each data set, model, and method we ran 10 simulations, generating 100,000
+samples for each simulation after an initial burn-in of 10,000.  We calculated
+the average effective sample size and the average effective sampling rate for
+each componenent of $\beta$ over the 10 runs.  In Table \ref{tab:general}, we
+report the minimum, median, and maximum of the average effective sample size and
+average effective sampling rate over the components of $\beta$ along with the
+average runtime.
+
+The effective sample size approximates the number of independent samples needed
+to approximate the MCMC population.  The effective sampling rate is the
+effective sample size per seconds of runtime, in other words, it is
+approximately the number of indendent draws produced per second.  The effective
+sampling rate is the most important quantity from a practical perspective, since
+it measures how quickly independent samples are created and hence the amount of
+time one must take to produce a sample of a certain quality.  However, the
+effective sample size is of interest from a theoretical perspective since it
+gives insight into how well each Markov Chain mixes.
+
+In addition to the general regression setting, we benchmarked the case in which
+the design matrix is orthogonal.  In that case, one may quickly sample from the
+truncated multivariate Gaussian distribution $(\beta | u, w, y, \tau, \sigma)$
+when using the mixture of triangles method since the kernel for this
+distribution is a product of independent trucated normals,
+\[
+\exp \Big( -\frac{1}{2 \sigma^2} \beta' \beta + \frac{1}{\sigma^2} \beta X' y \Big),
+\]
+as $X'X = I$.  In the mixture of normals case, $(\beta | \lambda, y, \tau,
+\sigma)$ may be factored as a product of indepdent normal distributions.  We use
+that structure to draw from the complete conditional of $\beta$ for a fair
+comparison between the two methods.  We report the same quantities as in the
+general case in Table \ref{tab:general}.  We synthetically generated orthogonal
+design matrices by transforming $\beta$ to a different coordianate system.  In
+particular, we used the QR decomposition so that $X = QR$ and $\gamma = R \beta$
+to do the regression $y = Q \gamma + \ep$.
+
+We believe the best measure of performance is the minimum effective sampling
+rate over the components of $\beta$.  There can be a significant amount of
+variation in the effective sample sizes of the respective componenents.  If one
+is concerned with, for instance, the sample mean of $\beta$, then the accuracy
+of this quantity will be controlled by the worst effective sample size across
+all components of $\beta$.  The effective sampling size takes that into account
+as well as the cost of computation, i.e. time to generate a certain number of
+smaples.
+
+The mixture of triangles method possesses some inherenet disadvanteges: first,
+one must introduce a slice variable for the purposes of Gibbs sampling; second,
+even after the introduction of that slice variable, the complete conditional of
+$\beta$ is a trucated multivariate normal distribution, which is a difficult
+distribution to sample and a challenging research problem in and of itself.  We
+tried several different methods for sampling $\beta$, all of which alter the
+original Markov Chain by, essentially, introducing a Gibbs step to produce a
+draw from a chain whose marginal density is the complete conditional of $\beta$.
+In particular, suppose that the Gibbs steps for the mixture of triangles method
+are described the transition kernels $K_u, K_w$, $K_\beta$ where $K_\beta$ is a
+draw from the truncated multivariate normal.  Ignoring $\sigma^2$ and $\tau$ for
+the moment, a single pass through the Gibbs sampler is
+\[
+K = K_u K_w K_\beta.
+\]
+Since we cannot sample $K_\beta$ directly we pick another kernel $\tilde
+K_\beta$ so that
+\[
+K_\beta = \lim_n (\tilde K_\beta)^n
+\]
+which generates a new Gibbs sampler via the single pass
+\[
+\tilde K = K_u K_w \tilde K_\beta.
+\]
+We tried various choices for $\tilde K_\beta$: the Gibbs method of
+\cite{geweke-1991}, the transformed Gibbs method of
+\cite{rodriguez-yam-etal-2004}, and the Hamilton-Monte-Carlo method of
+\cite{pakman-paninski-2012}.  We found that the transformed Gibbs method of
+\cite{rodriguez-yam-etal-2004} perfomed best.  Nonetheless, this method
+introduces additional autocorrelation into the Markov Chain than otherwise would
+have existed had we been able to draw from a truncated multivariate normal
+directly.  In contrast, the complete conditional for $\beta$ in the mixture of
+stable method is a multivariate normal distribution, which may be sampled with
+relative ease.  If the mixture of normals method has one drawback, it is
+sampling from the exponentially tilited stable distribution, which can be
+somewhat time consuming; but \cite{devroye-2009} provides an algorithm for
+sampling from this distribution that is relatively efficient.  These general
+impressions were borne out in our tests.  As seen in Table \ref{tab:general} and
+Table \ref{tab:ortho} the mixture of normals method has a superior effective
+sample size for all of the tests, though the mixture of triangles shows
+significant improvements when working with an orthogonalized design matrix.
+
+When taking the runtime into consideration, the mixture of triangles method
+fares well.  In the general regression case, when the dimension of $\beta$ is
+not too large the mixture of triangles method does as well or better than the
+mixture of normals method as measured by the effective sampling rate.  As the
+dimension of $\beta$ grows this advantage deteriorates.  When working with an
+orthogonalized design matrix, the mixture of triangle method is competitive with
+the mixture of normals method even when the dimension of $\beta$ gets large.
+
+While the effective sampling rate is the most important quantity from a
+practical point of view, some caveats are in order.  Unlike effective sample
+size, the runtime and hence the effective sampling rate depend upon many factors
+that have nothing to do with the theoretical properties of the sampler.  For
+instace, how one implements each Gibbs steps will effect the time it takes for
+the program to run.  Beyond that, the language one uses, compiler options if one
+is using a lower level language, and hardware can affect the running time.  In
+our tests there were even slight differenes in the runtime depending on whether
+we compiled the C routines use R's package builder or whether we compiled them
+on our own.
+
+\section{Sampling $\alpha$}
+
+One may let the data pick $\alpha$ by using a Metropolis-Hastings within Gibbs
+step.  In particular, the likelihood for $\alpha$ is
+\[
+\prod_{i=1}^p \exp \Big( - |\beta_i / \tau|^\alpha \Big).
+\]
+Letting $s_i = \log |\beta_i \ tau|$ we more easily express this as
+\[
+\exp \Big( - sum_{i=1}^p e^{\alpha s_i} \Big).
+\]
 
 
 % If you have a bibliography.
