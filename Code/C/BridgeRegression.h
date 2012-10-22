@@ -36,7 +36,7 @@
 
 #include "Matrix.h"
 #include "RNG.hpp"
-#include "retstable.c"
+#include "retstable.h"
 #include <math.h>
 #include <Eigen/Core>
 #include <Eigen/SVD>
@@ -495,13 +495,15 @@ void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed
 // could have singular precisions.  It is better to calculate beta_j based upon
 // likelihood.
 
-void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int niter)
+void BR::sample_beta_ortho(MF beta, const MF& beta_prev, const MF& u, const MF& omega, double sig2, double tau, double alpha, RNG& r, int burn)
 {
 
   Matrix beta_sub(P-1);
   Matrix XXbeta(1); 
 
   beta.copy(beta_prev);
+
+  int niter = burn + 1;
 
   for(int i=0; i<niter; i++){
 
@@ -608,7 +610,7 @@ void BR::sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r)
 
 void BR::sample_beta_stable_ortho(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r){
      for(uint i=0; i<P; i++) {
-      double u = (XX(i,i) + lambda(i) * sig2 / (tau * tau));
+      double u = XX(i,i) + lambda(i) * sig2 / (tau * tau);
       double s = sqrt(sig2 / u);
       double m = Xy(i) / u;
       beta(i) = r.norm(m, s);
