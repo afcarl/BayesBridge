@@ -46,7 +46,7 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
     {
       if( i%%verbose==0 ) cat("iteration ", i, "\n")
       if( i==(burn+1) ) ess.time = proc.time();
-
+      
       ## tau -- marginalized draw.
       if (!known.tau) tau = draw.tau(beta, alpha, nu.shape, nu.rate)
 
@@ -66,6 +66,7 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
 
       ## alpha
       if (!known.alpha) alpha = draw.alpha(alpha, beta, tau);
+      ## print(alpha)
       
       if(nsamp > burn)
         {

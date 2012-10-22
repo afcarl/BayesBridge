@@ -1,7 +1,7 @@
 ## Bridge regression using the mixture of triangles formulation.
 
 ## library("BayesBridge")
-library("msm");
+## library("msm");
 ## library(mvtnorm)
 ## library(truncnorm)
 library("tmg");
@@ -25,6 +25,14 @@ draw.w <- function(tau, beta, u, alpha)
   list("w"=w, "shape"=shape);
 }
 
+draw.w.marg <- function(alpha, p)
+{
+  pr = 1-alpha
+  shape = (runif(p) < pr) + 1;
+  w = rgamma(p, shape, 1)
+  list("w"=w, "shape"=shape);
+}
+
 draw.tau <- function(beta, alpha, c, d)
 {
   p = length(beta)
@@ -45,23 +53,44 @@ draw.alpha <- function(alpha, beta, tau, ep=0.1)
 {
   s = log(abs(beta / tau));
   a.old = alpha;
-  lb = 0.10
-  ub = 0.90
-  
+  lb = 0.01
+  ub = 0.99
+
   ## We might want to change these bounds if we have some belief about the value
   ## of alpha.
   l.new = max(c(lb, a.old-ep))
   r.new = min(c(ub, a.old+ep))
   d.new = r.new - l.new
-  a.new = runif(1, l.new, r.new); 
+  a.new = runif(1, l.new, r.new);
 
   d.old = min(c(ub, a.new+ep)) -  max(c(lb, a.new-ep))
-  
-  log.accept = - sum(exp(s*a.new)) + sum(exp(s*a.old)) +
-    log(d.old) - log(d.new);
 
-  if (runif(1) < exp(log.accept)) alpha = a.new
+  log.accept = - sum(exp(s*a.new)) + dbeta(a.new, 15, 1.0, log=TRUE) +
+    sum(exp(s*a.old)) - dbeta(a.old, 15, 1.0, log=TRUE) +
+    log(d.old) - log(d.new);
   
+  if (runif(1) < exp(log.accept)) alpha = a.new
+
+  alpha
+}
+
+draw.alpha.2 <- function(alpha, beta, tau, ep=0.1)
+{
+  s = log(abs(beta / tau));
+  a.old = alpha;
+  lb = 0.01
+  ub = 0.99
+
+  ## We might want to change these bounds if we have some belief about the value
+  ## of alpha.
+  a.new = runif(1, lb, ub);
+
+  d.old = min(c(ub, a.new+ep)) -  max(c(lb, a.new-ep))
+
+  log.accept = - sum(exp(s*a.new)) + sum(exp(s*a.old))
+  
+  if (runif(1) < exp(log.accept)) alpha = a.new
+
   alpha
 }
 
@@ -74,11 +103,11 @@ draw.beta.1 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
   p = length(bhat)
   b = (1-u)*{w^(1/alpha)}*tau
   for ( i in 1:p )
-  {
-    m = bhat[i] - crossprod(xx[i,-i],beta[-i]-bhat[-i])/xx[i,i]
-    v = sig2/xx[i,i]
-    beta[i] = rtnorm(1,m,sqrt(v),-b[i],b[i])
-  }
+    {
+      m = bhat[i] - crossprod(xx[i,-i],beta[-i]-bhat[-i])/xx[i,i]
+      v = sig2/xx[i,i]
+      beta[i] = rtnorm(1,m,sqrt(v),-b[i],b[i])
+    }
   beta
 }
 
@@ -86,8 +115,9 @@ draw.beta.1 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
 draw.beta.2 <- function(beta, a, tV, d, sig2, tau, u, w, alpha)
 {
   P = length(beta);
-  
+
   b = (1-u)*{w^(1/alpha)}*tau
+  ## b = (1-u) * tau * exp(log(w) / alpha)
   z = tV %*% beta;
 
   for (i in 1:P) {
@@ -130,15 +160,15 @@ draw.beta.3 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
   rt  = evd$vectors %*% diag(sqrt(evd$values), P) %*% t(evd$vectors);  ## sqrt XX
   irt = evd$vectors %*% diag(sqrt(1/evd$values), P) %*% t(evd$vectors);
   b = (1-u)*{w^(1/alpha)}*tau
-  
+
   z = rt %*% beta
   m = rt %*% bhat
 
   for (i in 1:P) {
-  
+
     left  = rep(0, P)
     right = rep(0, P)
-    
+
     for (j in 1:P) {
       rji = irt[j,-i] %*% z[-i]
       Dif = b[j] - rji;
@@ -146,14 +176,14 @@ draw.beta.3 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
       left[j]  = ifelse(irt[j,i] > 0, -Sum, -Dif) / abs(irt[j,i]);
       right[j] = ifelse(irt[j,i] > 0,  Dif,  Sum) / abs(irt[j,i]);
     }
-    
+
     lmax = max(left)
     rmin = min(right)
 
     z[i] = rtnorm(1, m[i], sqrt(sig2), lmax, rmin);
-    
+
   }
-  
+
   beta = irt %*% z;
 }
 
@@ -173,7 +203,7 @@ draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
 
   ## print(b)
   ## print(beta)
-  
+
   prec = xx / sig2;
   ell  = prec %*% bhat;
 
@@ -185,7 +215,7 @@ draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
 ################################################################################
 
 bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
-                         burn=100, sig2=0.0, tau=0.0, verbose=500)
+                          burn=100, sig2=0.0, tau=0.0, verbose=500)
 {
   X <- as.matrix(X)
   xx <- t(X)%*%X
@@ -201,7 +231,7 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   d  = jsvd$d
   A  = jsvd$u %*% diag(d);
   a  = t(A) %*% y;
-  
+
   p <- ncol(X)
 
   bhat <- drop(ixx%*%xy)
@@ -214,7 +244,7 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
   if (sig2 <= 0) sig2 = (1/length(y))*sum((y-X%*%bhat)^2)
   if (tau  <= 0) tau  = 1;
   if (alpha <=0) alpha = 0.5;
-  
+
   output <- list(u = matrix(nrow=nsamp, ncol=p),
                  w = matrix(nrow=nsamp, ncol=p),
                  shape = matrix(nrow=nsamp, ncol=p),
@@ -225,31 +255,37 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
                  )
 
   start.time = proc.time();
-  
+
   for( i in 1:(nsamp+burn))
-  {
+    {
       if( i%%verbose==0 ) cat("iteration ", i, "\n")
       if( i==(burn+1) ) ess.time = proc.time();
-
+      
       if (!known.tau) tau = draw.tau(beta, alpha, nu.shape, nu.rate)
-
+      ## cat("tau", tau, "\n");
+      
       if (!known.sig2) sig2 = draw.sig2(beta, X, y, sig2.shape, sig2.scale)
-
+      ## cat("sig2", sig2, "\n");
+      
       ws <- draw.w(tau, beta, u, alpha)
       w = ws$w
       shape = ws$shape
-      
+
       u <- draw.u(tau, beta, w, alpha)
 
+      ## for (k in 1:1) {
+      ## u <- draw.u(tau, beta, w, alpha)
       ## beta = draw.beta.1(beta, bhat, xx, sig2, tau, u, w, alpha)
       beta = draw.beta.2(beta, a, tV, d, sig2, tau, u, w, alpha)
       ## beta = draw.beta.3(beta, bhat, xx, sig2, tau, u, w, alpha)
       ## beta = draw.beta.4(beta, bhat, xx, sig2, tau, u, w, alpha);
+      ## }
 
       if (!known.alpha) alpha = draw.alpha(alpha, beta, tau);
+      ## print(alpha)
       
       if(i > burn)
-      {
+        {
           output$u[i-burn,]    = u
           output$w[i-burn,]    = w
           output$shape[i-burn,] = shape
@@ -257,8 +293,8 @@ bridge.tmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
           output$sig2[i-burn]  = sig2
           output$tau[i-burn]   = tau
           output$alpha[i-burn] = alpha
-      }
-  }
+        }
+    }
 
   end.time = proc.time();
   output$runtime = (end.time - start.time)[1];
