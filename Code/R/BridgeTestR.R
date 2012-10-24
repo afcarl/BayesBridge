@@ -51,18 +51,20 @@ if (FALSE) {
   for(i in 1:442){ X[i,] = X[i,] - mX; }
 
   ## Synthetic 1
-  n = 10
-  A <- matrix(c(1.0, 0.95, 0.95,
-                0.95, 1.0, 0.95,
-                0.95, 0.95, 1.0), byrow=TRUE, nrow=3);
+  n = 100
+  p = 20
+  A <- matrix(0.99, nrow=p, ncol=p);
+  diag(A) = 1.0
   U = chol(A);
-  z = matrix(rnorm(n*3), nrow=3, ncol=20);
+  z = matrix(rnorm(n*p), nrow=p, ncol=n);
   X = t( t(U) %*% z );
 
-  beta.synth = c(3, 3, 3);
-  sig2.synth = 1.0
-
-  y = X %*% beta.synth + sig2.synth * rnorm(n);
+  tau.syn = 0.1
+  sig2.syn = 1.0
+  alpha.syn = 0.99
+  beta.syn = rep(1.0, p)
+  ## beta.syn = rpgnorm(p, alpha.syn, 0.0, sig.for.pg(tau.syn, alpha.syn))
+  y = X %*% beta.syn + sig2.syn * rnorm(n);
   
   ## Synthetic 2
   n = 1000
@@ -77,25 +79,30 @@ if (FALSE) {
   tau.syn = 1.0
   sig2.syn = 1.0
   alpha.syn = 0.9
-  ## You can't generate data this way--marginal isn't stable it is polynomial tilted stable.
+  ## You can't generate data this way--marginal isn't stable, it is polynomial tilted stable.
   ## for(i in 1:p) lambda.syn[i] = 2 * retstable(0.5 * alpha.syn, 1.0, 0.0, method="LD");
   ## beta.syn = rnorm(p, 0.0, tau.syn / sqrt(lambda.syn));
   beta.syn = rpgnorm(p, alpha.syn, 0.0, sig.for.pg(tau.syn, alpha.syn))
-
   y = X %*% beta.syn + sig2.syn * rnorm(n);
-  
+
+  ## Synthetic 3
+  n = 1000
+  p = 500
+  alpha.syn = 0.5
+
+  ## Estimate
   LS = solve(t(X) %*% X, t(X) %*% y);
 
-  nsamp = 5000
+  nsamp = 10000
   burn  = 2000
-  tau = 0.0
-  alpha = 0.5
+  alpha = alpha.syn
+  tau = tau.syn
 
   out.tri = bridge.tmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=sig2.syn, tau=0.0, verbose=500, beta.true=beta.syn)
+    burn=burn, sig2=0.0, tau=0.0, verbose=500)
 
   out.nrm = bridge.nmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=sig2.syn, tau=0.0, verbose=500, beta.true=beta.syn) 
+    burn=burn, sig2=0.0, tau=0.0, verbose=500) 
 
   stat.tri = sum.stat(out.tri)
   stat.nrm = sum.stat(out.nrm)
@@ -106,20 +113,33 @@ if (FALSE) {
   ##---------------------------------------------------------------------------
   ## Looking for multimodality.
 
+  tau = tau.syn
+  out.C = bridge.reg.tri(y, X, nsamp*10, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+    sig2.true=0.0, tau.true=tau, burn=burn)
+
   P = ncol(X);
-  bk = 60;
+  bk = 100;
   
+  for (i in 1:P) {
+    hist(out.C$beta[,i], breaks=bk);
+    readline("<ENTER>");
+  }
+
+  par(mfrow=c(2,1))
   for (i in 1:P) {
     beta.1 = out.tri$beta[out.tri$shape[,i]==1,i]
     beta.2 = out.tri$beta[out.tri$shape[,i]==2,i]
-    h1 = hist(beta.1, breaks=bk)
-    h2 = hist(beta.2, breaks=bk)
+    h1 = hist(beta.1, breaks=bk, plot=FALSE)
+    h2 = hist(beta.2, breaks=bk, plot=FALSE)
+    hall = hist(out.tri$beta[,i], breaks=bk, plot=FALSE);
     ymax=max(c(h1$counts, h2$counts));
     xmin = min(c(h1$breaks, h2$breaks));
     xmax = max(c(h1$breaks, h2$breaks))
     plot(h1, col="#FF000088", ylim=c(0,ymax))
     plot(h2, col="#0000FF66", add=TRUE)
+    plot(hall);
     readline("<ENTER>");
   }
+  par(mfrow=c(1,1));
   
 }

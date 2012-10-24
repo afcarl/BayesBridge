@@ -87,8 +87,8 @@ draw.alpha <- function(alpha, beta, tau, ep=0.1)
 
   d.old = min(c(ub, a.new+ep)) -  max(c(lb, a.new-ep))
 
-  s.new = tau * a.new^(-1/a.new);
-  s.old = tau * a.old^(-1/a.old);
+  ## s.new = tau * a.new^(-1/a.new);
+  ## s.old = tau * a.old^(-1/a.old);
   ##log.accept = sum(mydpgnorm(beta, 0, tau, a.new, log=TRUE)) - sum(mydpgnorm(beta, 0, tau, a.old, log=TRUE)) +
     log.accept = llh.alpha(a.new, s) - llh.alpha(a.old, s) +
     dbeta(a.new, 1.0, 1.0, log=TRUE) - dbeta(a.old, 1.0, 1.0, log=TRUE) +
