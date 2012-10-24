@@ -1104,6 +1104,20 @@ our tests there were even slight differences in the runtime depending on whether
 we compiled the C routines use R's package builder or whether we compiled them
 on our own.
 
+\section{Sampling hyperparameters, $\alpha$}
+
+One may sample the hyperparameter $\alpha$ as well.  Again, it is more
+convenient to work directly with the exponential-power density, marginalizing
+out the latent variables $\{\omega_j, u_j\}$.  In that case, given the prior
+$p(\alpha)$, the posterior for $\alpha$ takes the form
+\[
+p(\alpha | \beta, \tau) \propto \frac{\alpha^p}{\Gamma(1/\alpha)^p}
+\prod_{i=1}^p \exp \Big( - |\beta_i / \tau|^\alpha \Big) p (\alpha).
+\]
+This may be sampled by either an independent or random-walk Metropolis Hastings.
+Keep in mind that the parameter $\alpha$ is restricted to the unit interval.
+
+
 
 % If you have a bibliography.
 % The file withe bibliography is name.bib.
