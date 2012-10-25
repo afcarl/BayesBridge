@@ -135,12 +135,13 @@ bridge.reg.tri <- function(y, X,
     beta  = array(0, dim=c(P, M));
     u     = array(0, dim=c(P, M));
     omega = array(0, dim=c(P, M));
+    shape = array(0, dim=c(P, M));
     sig2  = array(0, dim=c(M));
     tau   = array(0, dim=c(M));
     alpha = array(0, dim=c(M));
 
     OUT <- .C("bridge_regression",
-              beta, u, omega, sig2, tau, alpha,
+              beta, u, omega, shape, sig2, tau, alpha,
               as.double(y), as.double(X),
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
@@ -149,8 +150,9 @@ bridge.reg.tri <- function(y, X,
               as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn), as.integer(use.hmc),
               PACKAGE="Bridge");
 
-    output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]], "alpha"=OUT[[6]],
-                   "runtime"=OUT[[20]]);
+    output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "shape"=t(OUT[[4]]),
+                   "sig2"=OUT[[5]], "tau"=OUT[[6]], "alpha"=OUT[[7]],
+                   "runtime"=OUT[[21]]);
 
     colnames(output$beta) = colnames(X);
 
@@ -177,7 +179,7 @@ bridge.reg.stb <- function(y, X,
 
     alpha.true = alpha;
     
-    ok = check.parameters(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
 
     beta   = array(0, dim=c(P, M));

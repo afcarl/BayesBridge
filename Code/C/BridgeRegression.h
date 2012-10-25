@@ -119,6 +119,7 @@ class BridgeRegression
   // For sampling everything else.
   void sample_u(MF u, const MF& beta, const MF& omega, double tau, double alpha, RNG& r);
   void sample_omega(MF omega, const MF& beta, const MF& u, double tau, double alpha, RNG& r);
+  void sample_omega(MF omega, MF shape, const MF& beta, const MF& u, double tau, double alpha, RNG& r);
   void sample_sig2(MF sig2, const MF& beta, double sig2_shape, double sig2_scale, RNG& r);
   void sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double alpha, 
 		      double tau2_shape, double tau2_scale, RNG& r);
@@ -288,6 +289,25 @@ void BR::sample_omega(MF omega, const MF& beta, const MF& u, double tau, double 
       omega(j) = r.gamma_rate(1.0, 1.0);
     }
     else{
+      omega(j) = r.gamma_rate(2.0, 1.0);
+    }
+    omega(j) += a_j;
+  }
+} // sample_omega
+
+void BR::sample_omega(MF omega, MF shape, const MF& beta, const MF& u, double tau, double alpha, RNG& r)
+{
+  double prob;
+  for(uint j = 0; j < P; j++){
+    double a_j = exp( alpha * log( fabs(beta(j)) / ( (1 - u(j)) * tau) ) );
+    // prob = ( 1 - alpha * (1 + a(j)) ) / (1 - alpha * a(j));
+    prob = alpha / (1 + alpha * a_j);
+    if (r.unif() > prob){
+      shape(j) = 1.0;
+      omega(j) = r.gamma_rate(1.0, 1.0);
+    }
+    else{
+      shape(j) = 2.0;
       omega(j) = r.gamma_rate(2.0, 1.0);
     }
     omega(j) += a_j;
@@ -616,7 +636,7 @@ void BR::sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, doubl
 {
   Matrix s(P);
   for (uint i = 0; i < P; i++)
-    s(i) = fabs(beta(i) / tau);
+    s(i) = log(fabs(beta(i) / tau));
 
   double a_old = alpha_prev(0);
 
