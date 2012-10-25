@@ -26,12 +26,11 @@ is.above <- function(param, val, name){
 }
 
 # Check that the parameters are valid.
-check.parameters <- function(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate){
+check.parameters <- function(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate){
     ok = TRUE;
     if (N!=R)    { print("Error: y and X do not conform."); ok=FALSE; }
     ok = ok *
          is.above(M         , 1, "niter") *
-         is.above(alpha     , 0, "alpha") *
          is.above(sig2.shape, 0, "sig2.shape") *
          is.above(sig2.scale, 0, "sig2.scale") *
          is.above(nu.shape  , 0, "nu.shape") *
@@ -75,7 +74,16 @@ bridge.EM <- function(y, X,
     sig2 = 1.0;
     tau = ratio;
 
-    ok = check.parameters(N, R, 1, sig2, tau, alpha, 1.0, 1.0) *
+    if (ratio < 0) {
+      print("bridge.EM: ratio < 0")
+      return (0)
+    }
+    if (alpha < 0) {
+      print("bridge.EM: alpha < 0")
+      return(0)
+    }
+
+    ok = check.parameters(N, R, 1, 1.0, 1.0, 1.0, 1.0) *
          check.EM(lambda.max, tol, max.iter);
 
     if (!ok) { break; }
@@ -119,28 +127,30 @@ bridge.reg.tri <- function(y, X,
     M = nsamp;
     rtime = 0;
 
-    ok = check.parameters(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
 
+    alpha.true = alpha;
+    
     beta  = array(0, dim=c(P, M));
     u     = array(0, dim=c(P, M));
     omega = array(0, dim=c(P, M));
     sig2  = array(0, dim=c(M));
     tau   = array(0, dim=c(M));
+    alpha = array(0, dim=c(M));
 
     OUT <- .C("bridge_regression",
-              beta, u, omega, sig2, tau,
+              beta, u, omega, sig2, tau, alpha,
               as.double(y), as.double(X),
-              alpha,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
-              sig2.true, tau.true,
+              sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M),
               as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn), as.integer(use.hmc),
               PACKAGE="Bridge");
 
-    output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]],
-                   "runtime"=OUT[[19]]);
+    output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "sig2"=OUT[[4]], "tau"=OUT[[5]], "alpha"=OUT[[6]],
+                   "runtime"=OUT[[20]]);
 
     colnames(output$beta) = colnames(X);
 
@@ -164,6 +174,8 @@ bridge.reg.stb <- function(y, X,
     P = dim(X)[2];
     M = nsamp;
     rt = 0;
+
+    alpha.true = alpha;
     
     ok = check.parameters(N, R, M, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate);
     if (!ok) { break; }
@@ -172,18 +184,18 @@ bridge.reg.stb <- function(y, X,
     lambda = array(0, dim=c(P, M));
     sig2  = array(0, dim=c(M));
     tau   = array(0, dim=c(M));
+    alpha = array(0, dim=c(M));
 
     OUT <- .C("bridge_reg_stable",
-              beta, lambda, sig2, tau,
+              beta, lambda, sig2, tau, alpha,
               as.double(y), as.double(X),
-              alpha,
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
-              sig2.true, tau.true,
+              sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(ortho),
               PACKAGE="Bridge");
 
-    output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "runtime"=OUT[[18]])
+    output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "alpha"=OUT[[5]], "runtime"=OUT[[19]])
     colnames(output$beta) = colnames(X);
 
     output

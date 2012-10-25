@@ -608,7 +608,7 @@ double BR::llh_alpha_marg(double alpha, const MF& s, RNG& r)
   double p = (double)s.vol();
   double llh = p * log(alpha) - p * r.Gamma(1.0/alpha, true);
   for (int i = 0; i < (int)p; i++)
-    llh += exp(alpha * s(i));
+    llh -= exp(alpha * s(i));
   return llh;
 }
 
