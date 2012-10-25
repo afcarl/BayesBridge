@@ -51,7 +51,7 @@ if (FALSE) {
   for(i in 1:442){ X[i,] = X[i,] - mX; }
 
   ## Synthetic 1
-  n = 100
+  n = 200
   p = 20
   A <- matrix(0.99, nrow=p, ncol=p);
   diag(A) = 1.0
@@ -59,9 +59,9 @@ if (FALSE) {
   z = matrix(rnorm(n*p), nrow=p, ncol=n);
   X = t( t(U) %*% z );
 
-  tau.syn = 0.1
+  tau.syn = 1
   sig2.syn = 1.0
-  alpha.syn = 0.99
+  alpha.syn = 0.95
   beta.syn = rep(1.0, p)
   ## beta.syn = rpgnorm(p, alpha.syn, 0.0, sig.for.pg(tau.syn, alpha.syn))
   y = X %*% beta.syn + sig2.syn * rnorm(n);
@@ -78,7 +78,7 @@ if (FALSE) {
 
   tau.syn = 1.0
   sig2.syn = 1.0
-  alpha.syn = 0.9
+  alpha.syn = 0.95
   ## You can't generate data this way--marginal isn't stable, it is polynomial tilted stable.
   ## for(i in 1:p) lambda.syn[i] = 2 * retstable(0.5 * alpha.syn, 1.0, 0.0, method="LD");
   ## beta.syn = rnorm(p, 0.0, tau.syn / sqrt(lambda.syn));
@@ -95,14 +95,15 @@ if (FALSE) {
 
   nsamp = 10000
   burn  = 2000
-  alpha = alpha.syn
-  tau = tau.syn
 
+  alpha = 0.9
+  tau = 0.0
+    
   out.tri = bridge.tmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=0.0, tau=0.0, verbose=500)
+    burn=burn, sig2=0.0, tau=tau, verbose=500)
 
   out.nrm = bridge.nmix.R(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-    burn=burn, sig2=0.0, tau=0.0, verbose=500) 
+    burn=burn, sig2=0.0, tau=tau, verbose=500) 
 
   stat.tri = sum.stat(out.tri)
   stat.nrm = sum.stat(out.nrm)
@@ -113,29 +114,41 @@ if (FALSE) {
   ##---------------------------------------------------------------------------
   ## Looking for multimodality.
 
-  tau = tau.syn
-  out.C = bridge.reg.tri(y, X, nsamp*10, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+  alpha = 0.85
+  tau = 0.1
+  sig2 = 0.0
+  
+  out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*100, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
+    nu.shape=nu.shape, nu.rate=nu.rate,
+    sig2.true=0.0, tau.true=tau, burn=burn)
+
+  out.C.stb = bridge.reg.stb(y, X, nsamp*10, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
     sig2.true=0.0, tau.true=tau, burn=burn)
 
   P = ncol(X);
   bk = 100;
-  
+
+  out.C = out.C.tri
   for (i in 1:P) {
     hist(out.C$beta[,i], breaks=bk);
     readline("<ENTER>");
   }
 
+  P = ncol(X);
+  bk = 100;
+
+  out = out.C.tri
   par(mfrow=c(2,1))
   for (i in 1:P) {
-    beta.1 = out.tri$beta[out.tri$shape[,i]==1,i]
-    beta.2 = out.tri$beta[out.tri$shape[,i]==2,i]
+    beta.1 = out$beta[out$shape[,i]==1,i]
+    beta.2 = out$beta[out$shape[,i]==2,i]
     h1 = hist(beta.1, breaks=bk, plot=FALSE)
     h2 = hist(beta.2, breaks=bk, plot=FALSE)
-    hall = hist(out.tri$beta[,i], breaks=bk, plot=FALSE);
+    hall = hist(out$beta[,i], breaks=bk, plot=FALSE);
     ymax=max(c(h1$counts, h2$counts));
     xmin = min(c(h1$breaks, h2$breaks));
     xmax = max(c(h1$breaks, h2$breaks))
-    plot(h1, col="#FF000088", ylim=c(0,ymax))
+    plot(h1, col="#FF000088", ylim=c(0,ymax), main=paste("hist", i))
     plot(h2, col="#0000FF66", add=TRUE)
     plot(hall);
     readline("<ENTER>");
