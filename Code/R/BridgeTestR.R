@@ -137,7 +137,7 @@ if (FALSE) {
   P = ncol(X);
   bk = 100;
 
-  out = out.C.tri
+  out = out.tri
   par(mfrow=c(2,1))
   for (i in 1:P) {
     beta.1 = out$beta[out$shape[,i]==1,i]
