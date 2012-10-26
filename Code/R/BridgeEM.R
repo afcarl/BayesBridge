@@ -1,4 +1,4 @@
-bridge.EM.R = function(y, X, alpha, ratio=1.0, lambda.max=1e9*ratio, tol=1e-9, max.iter=30){
+bridge.EM.R = function(y, X, alpha, ratio=1.0, lambda.max=1e9*ratio, tol=1e-9, max.iter=30, init=NULL){
     X <- as.matrix(X)
     xx <- t(X)%*%X
     xy <- t(X)%*%y
@@ -8,6 +8,7 @@ bridge.EM.R = function(y, X, alpha, ratio=1.0, lambda.max=1e9*ratio, tol=1e-9, m
 
     bhat <- drop(ixx%*%xy)
     Beta = bhat
+    if (!is.null(init)) Beta = init
 
     diff = 1
 
@@ -36,5 +37,6 @@ bridge.EM.R = function(y, X, alpha, ratio=1.0, lambda.max=1e9*ratio, tol=1e-9, m
         iter = iter + 1;
     }
 
-    Beta = drop(Beta)
+    out = list("beta"=drop(Beta), "iter"=iter, "diff"=diff)
+    out
 }
