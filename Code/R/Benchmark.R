@@ -25,13 +25,13 @@ oth <- list("EFRON" = FALSE,
 nsamp = 100000
 burn = 10000
 alpha = 0.5
-ntrials = 10
+ntrials = 1
 tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
 use.hmc = FALSE
 
 save.it  = FALSE  ## Write output to file
-plot.it  = FALSE ## Plot histograms
+plot.it  = TRUE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
 ################################################################################
@@ -153,10 +153,12 @@ compare.it <- function(y, X, nsamp=10000,
 
   for (i in 1:ntrials){
     
-    gb.tri = bridge.reg.tri(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-      0.0, tau, burn, ortho=ortho, betaburn=betaburn, use.hmc=use.hmc);
-    gb.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
-      0.0, tau, burn, ortho=ortho)
+    gb.tri = bridge.reg.tri(y, X, nsamp, alpha=alpha,
+      sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
+      sig2=0.0, tau=tau, burn=burn, ortho=ortho, betaburn=betaburn, use.hmc=use.hmc);
+    gb.stb = bridge.reg.stb(y, X, nsamp, alpha=alpha,
+      sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
+      sig2=0.0, tau=tau, burn=burn, ortho=ortho)
     
     sstat.tri = sum.stat(gb.tri);
     sstat.stb = sum.stat(gb.stb);
