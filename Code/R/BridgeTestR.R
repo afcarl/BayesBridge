@@ -33,11 +33,15 @@ if (FALSE) {
   source("~/RPackage/BayesLogit/Code/R/Efficiency.R")
 
   library("coda")
+  library("pgnorm")
 
   sig2.shape = 0.0
   sig2.scale = 0.0
   nu.shape = 2.0
   nu.rate  = 2.0
+
+  nsamp = 10000
+  burn  = 2000
 
   ## Diabetes
   load("~/RPackage/BayesBridge/Code/C/diabetes.RData")
@@ -59,7 +63,7 @@ if (FALSE) {
   z = matrix(rnorm(n*p), nrow=p, ncol=n);
   X = t( t(U) %*% z );
 
-  tau.syn = 1
+  tau.syn = 1.0
   sig2.syn = 1.0
   alpha.syn = 0.95
   beta.syn = rep(1.0, p)
@@ -67,18 +71,16 @@ if (FALSE) {
   y = X %*% beta.syn + sig2.syn * rnorm(n);
   
   ## Synthetic 2
-  n = 1000
-  p = 500
-  ## A = matrix(0.9 * runif(p*p), ncol=p, nrow=p);
-  ## A = 0.5 * (A + t(A)); diag(A) = 1.0
-  A = matrix(0.3, ncol=p, nrow=p); diag(A) = 1.0
+  n = 200
+  p = 100
+  A = matrix(0.9, ncol=p, nrow=p); diag(A) = 1.0
   U = chol(A);
   z = matrix(rnorm(n*p), nrow=n, ncol=p);
   X = z %*% U;
 
-  tau.syn = 1.0
+  tau.syn = 1e-11
   sig2.syn = 1.0
-  alpha.syn = 0.95
+  alpha.syn = 0.1
   ## You can't generate data this way--marginal isn't stable, it is polynomial tilted stable.
   ## for(i in 1:p) lambda.syn[i] = 2 * retstable(0.5 * alpha.syn, 1.0, 0.0, method="LD");
   ## beta.syn = rnorm(p, 0.0, tau.syn / sqrt(lambda.syn));
@@ -113,22 +115,22 @@ if (FALSE) {
 
   ##---------------------------------------------------------------------------
   ## Looking for multimodality.
-
+  
   alpha = 0.85
   tau = 0.1
   sig2 = 0.0
   
-  out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*100, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
+  out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*200, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
     nu.shape=nu.shape, nu.rate=nu.rate,
     sig2.true=0.0, tau.true=tau, burn=burn)
 
-  out.C.stb = bridge.reg.stb(y, X, nsamp*10, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+  out.C.stb = bridge.reg.stb(y, X, nsamp*1, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
     sig2.true=0.0, tau.true=tau, burn=burn)
 
   P = ncol(X);
   bk = 100;
 
-  out.C = out.C.tri
+  out.C = out.C.stb
   for (i in 1:P) {
     hist(out.C$beta[,i], breaks=bk);
     readline("<ENTER>");
@@ -137,7 +139,7 @@ if (FALSE) {
   P = ncol(X);
   bk = 100;
 
-  out = out.tri
+  out = out.C.tri
   par(mfrow=c(2,1))
   for (i in 1:P) {
     beta.1 = out$beta[out$shape[,i]==1,i]
@@ -154,5 +156,56 @@ if (FALSE) {
     readline("<ENTER>");
   }
   par(mfrow=c(1,1));
+
+  ################################################################################
+
+  out = out.C.tri
+  for (i in 1:P) {
+    png(paste("Images/beta-", i,".png", sep=""), width=900, height=400);
+    par(mfrow=c(1,2))
+    beta.1 = out$beta[out$shape[,i]==1,i]
+    beta.2 = out$beta[out$shape[,i]==2,i]
+    h1 = hist(beta.1, breaks=bk, plot=FALSE)
+    h2 = hist(beta.2, breaks=bk, plot=FALSE)
+    hall = hist(out$beta[,i], breaks=bk, plot=FALSE);
+    ymax=max(c(h1$counts, h2$counts));
+    xmin = min(c(h1$breaks, h2$breaks));
+    xmax = max(c(h1$breaks, h2$breaks))
+    plot(hall, col="#22222244", border="#22222200", xlab=expression(beta),
+         main=paste("Posterior draws of beta", i));
+    plot(h1, col="#10101020", border="#10101000", ylim=c(0,ymax), xlab=expression(beta),
+         main="Draws stratified by mixture component.")
+    plot(h2, col="#20202020", border="#10101010", add=TRUE)
+    ## readline("<ENTER>");
+    dev.off();
+  }
+  par(mfrow=c(1,1));
+ 
+
+  ##------------------------------------------------------------------------------
+
+  png("Images/beta-ex.png", width=900, height=200);
+  par(mfrow=c(1,4), mar=c(4, 5, 4, 3))
+  cex = 2.0
+  par(mfrow=c(1,4))
+  for (i in c(2,3)) {
+    beta.1 = out$beta[out$shape[,i]==1,i]
+    beta.2 = out$beta[out$shape[,i]==2,i]
+    h1 = hist(beta.1, breaks=bk, plot=FALSE)
+    h2 = hist(beta.2, breaks=bk, plot=FALSE)
+    hall = hist(out$beta[,i], breaks=bk, plot=FALSE);
+    ymax=max(c(h1$counts, h2$counts));
+    xmin = min(c(h1$breaks, h2$breaks));
+    xmax = max(c(h1$breaks, h2$breaks))
+    plot(hall, col="#22222244", border="#22222200", xlab="", ylab="", main="");
+    title(main=paste("Posterior draws of beta", i), xlab=expression(beta), ylab="Freq.", cex.main=cex, cex.lab=cex);
+    plot(h1, col="#10101020", border="#10101000", ylim=c(0,ymax), xlab="", ylab="", main="");
+    title(main=paste("Stratified"), xlab=expression(beta), ylab="Freq.", cex.main=cex, cex.lab=cex);
+    plot(h2, col="#20202020", border="#10101010", add=TRUE)
+  }
+  dev.off()
+
+
+  
   
 }
