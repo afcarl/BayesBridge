@@ -53,7 +53,7 @@ draw.sig2 <- function(beta, x, y, sig2.shape=0.0, sig2.scale=0.0)
 
 sig.for.pg <- function(tau, alpha)
 {
-  sig2 = gamma(3/alpha) / (gamma(1/alpha) * tau^2);
+  sig2 = tau^2 * gamma(3/alpha) / gamma(1/alpha);
   sqrt(sig2)
 }
 
