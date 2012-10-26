@@ -126,7 +126,8 @@ class BridgeRegression
 
   void sample_tau_marg(MF tau, const MF& beta, double alpha, double nu_shape, double nu_rate, RNG& r);
   double llh_alpha_marg(double alpha, const MF& s, RNG& r);
-  void sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, double tau, double ep, RNG& r);
+  void sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, double tau, 
+			 RNG& r, double pr_a, double pr_b, double ep=0.1);
 
   void sample_lambda(MF lambda, MF beta, double alpha, double tau, RNG& r);
   void sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r);
@@ -632,7 +633,8 @@ double BR::llh_alpha_marg(double alpha, const MF& s, RNG& r)
   return llh;
 }
 
-void BR::sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, double tau, double ep, RNG& r)
+void BR::sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, double tau, 
+			   RNG& r, double pr_a, double pr_b, double ep)
 {
   Matrix s(P);
   for (uint i = 0; i < P; i++)
@@ -651,6 +653,7 @@ void BR::sample_alpha_marg(MF alpha, const MF& alpha_prev, const MF& beta, doubl
 
   double log_accept = 
     llh_alpha_marg(a_new, s, r) - llh_alpha_marg(a_old, s, r) \
+    + log(r.d_beta(a_new, pr_a, pr_b)) - log(r.d_beta(a_old, pr_a, pr_b)) \
     + log(d_old) - log(d_new);
     
   alpha(0) = a_new;

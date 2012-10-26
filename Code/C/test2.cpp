@@ -47,13 +47,13 @@ int main(int argc, char** argv)
   Matrix tau ((uint)1, (uint)1, M);
   Matrix alpha((uint)1, (uint)1, M);
 
-  bridge_regression(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, my_alpha, 100, 30, false);
-  // bridge_regression_ortho(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, my_alpha, 100);
+  bridge_regression(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100, 30, false);
+  // bridge_regression_ortho(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
   
   Matrix lambda(N, (uint)1, M);
 
-  // bridge_regression_stable(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, my_alpha, 100);
-  // bridge_regression_stable_ortho(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, my_alpha, 100);
+  // bridge_regression_stable(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
+  // bridge_regression_stable_ortho(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
 
   printf("Regression done.  Write out.\n");
 

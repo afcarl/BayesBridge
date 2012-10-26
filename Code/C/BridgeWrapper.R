@@ -26,7 +26,7 @@ is.above <- function(param, val, name){
 }
 
 # Check that the parameters are valid.
-check.parameters <- function(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate){
+check.parameters <- function(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a, alpha.b){
     ok = TRUE;
     if (N!=R)    { print("Error: y and X do not conform."); ok=FALSE; }
     ok = ok *
@@ -34,7 +34,10 @@ check.parameters <- function(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate)
          is.above(sig2.shape, 0, "sig2.shape") *
          is.above(sig2.scale, 0, "sig2.scale") *
          is.above(nu.shape  , 0, "nu.shape") *
-         is.above(nu.rate   , 0, "nu.rate");
+         is.above(nu.rate   , 0, "nu.rate") *
+         is.above(alpha.a   , -1, "alpha.a") *
+         is.above(alpha.b   , -1, "alpha.b");
+    
 
     ## if (M > 1000){
     ##     ans = readline(paste("niter =", M, "> 1000.  Do you really want to proceed? [n] "));
@@ -118,6 +121,7 @@ bridge.reg.tri <- function(y, X,
                            alpha=0.5,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=2.0, nu.rate=2.0,
+                           alpha.a=1.0, alpha.b=1.0,
                            sig2.true=0.0, tau.true=0.0,
                            burn=500, ortho=FALSE, betaburn=0, use.hmc=FALSE)
 {
@@ -127,7 +131,7 @@ bridge.reg.tri <- function(y, X,
     M = nsamp;
     rtime = 0;
 
-    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a, alpha.b);
     if (!ok) { break; }
 
     alpha.true = alpha;
@@ -145,6 +149,7 @@ bridge.reg.tri <- function(y, X,
               as.double(y), as.double(X),
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
+              alpha.a, alpha.b,
               sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M),
               as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn), as.integer(use.hmc),
@@ -152,7 +157,7 @@ bridge.reg.tri <- function(y, X,
 
     output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "shape"=t(OUT[[4]]),
                    "sig2"=OUT[[5]], "tau"=OUT[[6]], "alpha"=OUT[[7]],
-                   "runtime"=OUT[[21]]);
+                   "runtime"=OUT[[23]]);
 
     colnames(output$beta) = colnames(X);
 
@@ -168,6 +173,7 @@ bridge.reg.stb <- function(y, X,
                            alpha=0.5,
                            sig2.shape=0.0, sig2.scale=0.0,
                            nu.shape=2.0, nu.rate=2.0,
+                           alpha.a=1.0, alpha.b=1.0,
                            sig2.true=0.0, tau.true=0.0,
                            burn=500, ortho=FALSE)
 {
@@ -179,7 +185,7 @@ bridge.reg.stb <- function(y, X,
 
     alpha.true = alpha;
     
-    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate);
+    ok = check.parameters(N, R, M, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a, alpha.b);
     if (!ok) { break; }
 
     beta   = array(0, dim=c(P, M));
@@ -193,11 +199,12 @@ bridge.reg.stb <- function(y, X,
               as.double(y), as.double(X),
               sig2.shape, sig2.scale,
               nu.shape, nu.rate,
+              alpha.a, alpha.b,
               sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(ortho),
               PACKAGE="Bridge");
 
-    output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "alpha"=OUT[[5]], "runtime"=OUT[[19]])
+    output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "alpha"=OUT[[5]], "runtime"=OUT[[21]])
     colnames(output$beta) = colnames(X);
 
     output
@@ -212,6 +219,7 @@ bridge.reg <- function(y, X,
                        alpha=0.5,
                        sig2.shape=0.0, sig2.scale=0.0,
                        nu.shape=2.0, nu.rate=2.0,
+                       alpha.a=1.0, alpha.b=1.0,
                        sig2.true=0.0, tau.true=0.0,
                        burn=500, method="triangle", ortho=FALSE)
 {
@@ -223,6 +231,7 @@ bridge.reg <- function(y, X,
       alpha=0.5,
       sig2.shape=0.0, sig2.scale=0.0,
       nu.shape=0.5, nu.rate=0.5,
+      alpha.a=1.0, alpha.b=1.0,
       sig2.true=0.0, tau.true=0.0,
       burn=500, ortho=ortho)
   }
@@ -232,6 +241,7 @@ bridge.reg <- function(y, X,
       alpha=0.5,
       sig2.shape=0.0, sig2.scale=0.0,
       nu.shape=0.5, nu.rate=0.5,
+      alpha.a=1.0, alpha.b=1.0,
       sig2.true=0.0, tau.true=0.0,
       burn=500, ortho=ortho)
   }

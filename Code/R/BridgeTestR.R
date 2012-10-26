@@ -39,6 +39,8 @@ if (FALSE) {
   sig2.scale = 0.0
   nu.shape = 2.0
   nu.rate  = 2.0
+  alpha.a  = 1.0
+  alpha.b  = 1.0
 
   nsamp = 10000
   burn  = 2000
@@ -115,16 +117,19 @@ if (FALSE) {
 
   ##---------------------------------------------------------------------------
   ## Looking for multimodality.
+
+  alpha.a = 0.5
+  alpha.b = 10
   
   alpha = 0.85
   tau = 0.1
   sig2 = 0.0
   
-  out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*200, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
-    nu.shape=nu.shape, nu.rate=nu.rate,
+  out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*10, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
+    nu.shape=nu.shape, nu.rate=nu.rate, alpha.a=alpha.a, alpha.b=alpha.b,
     sig2.true=0.0, tau.true=tau, burn=burn)
 
-  out.C.stb = bridge.reg.stb(y, X, nsamp*1, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate,
+  out.C.stb = bridge.reg.stb(y, X, nsamp*10, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a=alpha.a, alpha.b=alpha.b,
     sig2.true=0.0, tau.true=tau, burn=burn)
 
   P = ncol(X);
@@ -184,8 +189,25 @@ if (FALSE) {
 
   ##------------------------------------------------------------------------------
 
-  png("Images/beta-ex.png", width=900, height=200);
+  sig2.shape = 0.0
+  sig2.scale = 0.0
+  nu.shape = 2.0
+  nu.rate  = 2.0
+
+  nsamp = 10000
+  burn  = 2000
+
+  alpha = 0.85
+  tau = 0.1
+  sig2 = 0.0
+  
+  out = bridge.reg.tri(y, X, nsamp=nsamp, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
+    nu.shape=nu.shape, nu.rate=nu.rate,
+    sig2.true=0.0, tau.true=tau, burn=burn)
+  
+  png("beta-ex.png", width=900, height=200);
   par(mfrow=c(1,4), mar=c(4, 5, 4, 3))
+  #### FONT SIZE ####
   cex = 2.0
   par(mfrow=c(1,4))
   for (i in c(2,3)) {
@@ -204,8 +226,5 @@ if (FALSE) {
     plot(h2, col="#20202020", border="#10101010", add=TRUE)
   }
   dev.off()
-
-
-  
   
 }

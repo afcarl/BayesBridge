@@ -58,6 +58,8 @@ double bridge_regression(MatrixFrame & beta,
 			 double sig2_scale,
 			 double nu_shape,
 			 double nu_rate,
+			 double alpha_a,
+			 double alpha_b,
 			 double true_sig2, // 
 			 double true_tau , // Stored in tau  if true.
 			 double true_alpha, 
@@ -114,7 +116,7 @@ double bridge_regression(MatrixFrame & beta,
       // br.sample_omega(omega[0], beta[0], u[0], tau[0](0), alpha[0](0), r);
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha[0](0), r);
       br.sample_beta(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha[0](0), r, betaburn, use_hmc);
-      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), r, alpha_a, alpha_b);
       // br.sample_tau_tri(tau[0], beta[0], u[0], omega[0], alpha, 4.0, 4.0, r);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
@@ -147,7 +149,7 @@ double bridge_regression(MatrixFrame & beta,
       // } // end betauburn
       // You must change indexing if the following is uncommented.
       // if (!know_tau) br.sample_tau_tri(tau[i], beta[i], u[i], omega[i], alpha, 4.0, 4.0, r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -180,6 +182,8 @@ double bridge_regression_stable(MatrixFrame & beta,
 				double sig2_scale,
 				double nu_shape,
 				double nu_rate,
+				double alpha_a,
+				double alpha_b,
 				double true_sig2,
 				double true_tau,
 				double true_alpha,
@@ -232,7 +236,7 @@ double bridge_regression_stable(MatrixFrame & beta,
       br.sample_lambda(lambda[0], beta[0], alpha[0](0), tau[0](0), r);
       br.sample_beta_stable(beta[0], lambda[0], alpha[0](0), sig2[0](0), tau[0](0), r);
       // if (!know_tau) br.sample_tau_stable(tau[0], beta[0], lambda[0], 4.0, 4.0, r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -254,7 +258,7 @@ double bridge_regression_stable(MatrixFrame & beta,
       br.sample_beta_stable(beta[i], lambda[i], alpha[i-1](0), sig2[i](0), tau[i](0), r); 
       // You must change indexing if the following is uncommented.
       // if (!know_tau) br.sample_tau_stable(tau[i], beta[i], lambda[i], 4.0, 4.0, r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), r, alpha_b, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -293,6 +297,8 @@ double bridge_regression_ortho(MatrixFrame & beta,
 			       double sig2_scale,
 			       double nu_shape,
 			       double nu_rate,
+			       double alpha_a,
+			       double alpha_b,
 			       double true_sig2, // 
 			       double true_tau , // Stored in tau  if true.
 			       double true_alpha, 
@@ -348,7 +354,7 @@ double bridge_regression_ortho(MatrixFrame & beta,
       br.sample_u(u[0], beta[0], omega[0], tau[0](0), alpha[0](0), r);
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta_ortho(beta[0], beta[0], u[0], omega[0], sig2[0](0), tau[0](0), alpha[0](0), r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -370,7 +376,7 @@ double bridge_regression_ortho(MatrixFrame & beta,
       br.sample_u(u[i], beta[i-1], omega[i], tau[i](0), alpha[i-1](0), r);
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta_ortho(beta[i], beta[i-1], u[i], omega[i], sig2[i](0), tau[i](0), alpha[i-1](0), r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -403,6 +409,8 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
 				      double sig2_scale,
 				      double nu_shape,
 				      double nu_rate,
+				      double alpha_a,
+				      double alpha_b,
 				      double true_sig2,
 				      double true_tau,
 				      double true_alpha,
@@ -454,6 +462,7 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
       br.sample_lambda(lambda[0], beta[0], alpha[0](0), tau[0](0), r);
       if (!know_sig2) br.sample_sig2(sig2[0], beta[0], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta_stable_ortho(beta[0], lambda[0], alpha[0](0), sig2[0](0), tau[0](0), r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[0], alpha[0], beta[0], tau[0](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -473,7 +482,7 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
       br.sample_lambda(lambda[i], beta[i-1], alpha[i-1](0), tau[i](0), r);
       if (!know_sig2) br.sample_sig2(sig2[i], beta[i-1], sig2_shape, sig2_scale, r);  // Sample sig2.
       br.sample_beta_stable_ortho(beta[i], lambda[i], alpha[i-1](0), sig2[i](0), tau[i](0), r);
-      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), 0.3, r);
+      if (!know_alpha) br.sample_alpha_marg(alpha[i], alpha[i-1], beta[i], tau[i](0), r, alpha_a, alpha_b);
       #ifdef USE_R
       if (i % 10 == 0) R_CheckUserInterrupt();
       #endif
@@ -540,6 +549,8 @@ void bridge_regression(double *betap,
 		       const double *sig2_scale,
 		       const double *nu_shape,
 		       const double *nu_rate,
+		       const double *alpha_a,
+		       const double *alpha_b,
 		       const double *true_sig2,
 		       const double *true_tau,
 		       const double *true_alpha,
@@ -573,6 +584,7 @@ void bridge_regression(double *betap,
     *runtime = bridge_regression(beta, u, omega, shape, sig2, tau, alpha, y, X,
 				 *sig2_shape, *sig2_scale,
 				 *nu_shape, *nu_rate,
+				 *alpha_a, *alpha_b,
 				 *true_sig2, *true_tau, *true_alpha,
 				 *burn, *betaburn, *use_hmc);
   }
@@ -582,6 +594,7 @@ void bridge_regression(double *betap,
 				       y, X,
 				       *sig2_shape, *sig2_scale,
 				       *nu_shape, *nu_rate,
+				       *alpha_a, *alpha_b,
 				       *true_sig2, *true_tau, *true_alpha,
 				       *burn);
 
@@ -621,6 +634,8 @@ void bridge_reg_stable(double *betap,
 		       const double *sig2_scale,
 		       const double *nu_shape,
 		       const double *nu_rate,
+		       const double *alpha_a,
+		       const double *alpha_b,
 		       const double *true_sig2,
 		       const double *true_tau,
 		       const double *true_alpha,
@@ -649,6 +664,7 @@ void bridge_reg_stable(double *betap,
 					y, X,
 					*sig2_shape, *sig2_scale,
 					*nu_shape, *nu_rate,
+					*alpha_a, *alpha_b,
 					*true_sig2, *true_tau, *true_alpha,
 					(uint)*burn);
   }
@@ -657,6 +673,7 @@ void bridge_reg_stable(double *betap,
 					      y, X,
 					      *sig2_shape, *sig2_scale,
 					      *nu_shape, *nu_rate,
+					      *alpha_a, *alpha_b,
 					      *true_sig2, *true_tau, *true_alpha,
 					      (uint)*burn);
   }
