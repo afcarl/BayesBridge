@@ -7,7 +7,8 @@
 
 #include "BridgeWrapper.h"
 #include <time.h>
-#include <math.h>
+// #include <math.h>
+#include <cmath>
 #include <exception>
 
 // #include <algorithm>
@@ -77,11 +78,12 @@ double bridge_regression(MatrixFrame & beta,
   bool know_alpha = true_alpha > 0;
 
   // Details.
-  printf("Bridge Regression (Triangles):");
+  printf("Bridge Regression (mix. of triangles):");
   if (know_alpha) printf(" known alpha=%g", true_alpha);
   if (know_sig2) printf(", sig2=%g", true_sig2);
   if (know_tau ) printf(", tau=%g", true_tau);
   printf("\nBurn-in: %i, Num. Samples: %i\n", burn, M);
+  if (use_hmc) printf("Using HMC!\n");
 
   // Initialize.
   Matrix ls;
@@ -199,7 +201,7 @@ double bridge_regression_stable(MatrixFrame & beta,
   bool know_alpha = true_alpha > 0;
 
   // Details.
-  printf("Bridge Regression (Triangles):");
+  printf("Bridge Regression (mix. of normals):");
   if (know_alpha) printf(" known alpha=%g", true_alpha);
   if (know_sig2) printf(", sig2=%g", true_sig2);
   if (know_tau ) printf(", tau=%g", true_tau);
@@ -314,7 +316,7 @@ double bridge_regression_ortho(MatrixFrame & beta,
   bool know_alpha = true_alpha > 0;
 
   // Details.
-  printf("Bridge Regression (Triangles):");
+  printf("Bridge Regression (mix. of triangles):");
   if (know_alpha) printf(" known alpha=%g", true_alpha);
   if (know_sig2) printf(", sig2=%g", true_sig2);
   if (know_tau ) printf(", tau=%g", true_tau);
@@ -426,7 +428,7 @@ double bridge_regression_stable_ortho(MatrixFrame & beta,
   bool know_alpha = true_alpha > 0;
 
   // Details.
-  printf("Bridge Regression (Triangles):");
+  printf("Bridge Regression (mix. of normals):");
   if (know_alpha) printf(" known alpha=%g", true_alpha);
   if (know_sig2) printf(", sig2=%g", true_sig2);
   if (know_tau ) printf(", tau=%g", true_tau);
