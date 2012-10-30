@@ -57,13 +57,13 @@ sig.for.pg <- function(tau, alpha)
   sqrt(sig2)
 }
 
-mydpgnorm <- function(y, m, tau, alpha, log=FALSE)
-{
-  sig = sig.for.pg(tau, alpha);
-  out = dpgnorm(y, alpha, m, sig);
-  if (log) out = log(out)
-  out
-}
+## mydpgnorm <- function(y, m, tau, alpha, log=FALSE)
+## {
+##   sig = sig.for.pg(tau, alpha);
+##   out = dpgnorm(y, alpha, m, sig);
+##   if (log) out = log(out)
+##   out
+## }
 
 llh.alpha <- function(alpha, s)
 {
@@ -71,7 +71,7 @@ llh.alpha <- function(alpha, s)
   p * log(alpha) - p * lgamma(1/alpha) - sum(exp(alpha * s))
 }
 
-draw.alpha <- function(alpha, beta, tau, ep=0.1)
+draw.alpha <- function(alpha, beta, tau, pr.a=1.0, pr.b=1.0, ep=0.1)
 {
   s = log(abs(beta / tau));
   a.old = alpha;
@@ -91,7 +91,7 @@ draw.alpha <- function(alpha, beta, tau, ep=0.1)
   ## s.old = tau * a.old^(-1/a.old);
   ##log.accept = sum(mydpgnorm(beta, 0, tau, a.new, log=TRUE)) - sum(mydpgnorm(beta, 0, tau, a.old, log=TRUE)) +
     log.accept = llh.alpha(a.new, s) - llh.alpha(a.old, s) +
-    dbeta(a.new, 1.0, 1.0, log=TRUE) - dbeta(a.old, 1.0, 1.0, log=TRUE) +
+    dbeta(a.new, pr.a, pr.b, log=TRUE) - dbeta(a.old, pr.a, pr.b, log=TRUE) +
     log(d.old) - log(d.new);
   
   if (runif(1) < exp(log.accept)) alpha = a.new
