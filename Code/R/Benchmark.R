@@ -25,13 +25,14 @@ oth <- list("EFRON" = FALSE,
 nsamp = 100000
 burn = 10000
 alpha = 0.5
-ntrials = 1
+ntrials = 10
 tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
 use.hmc = FALSE
+inflate = 1
 
-save.it  = FALSE  ## Write output to file
-plot.it  = TRUE ## Plot histograms
+save.it  = TRUE  ## Write output to file
+plot.it  = FALSE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
 ################################################################################
@@ -79,11 +80,11 @@ if (FALSE) {
 
   LS = solve(t(X) %*% X, t(X) %*% y);
 
-  nsamp = 5000
+  nsamp = 100000
   burn  = 1000
 
-  gb1 = bridge.reg.tri(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, burn, ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc);
-  gb2 = bridge.reg.stb(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 0.0, 0.0, burn, ortho=FALSE);
+  gb1 = bridge.reg.tri(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, sig2.true=0, tau.true=0, burn=burn, ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc);
+  gb2 = bridge.reg.stb(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, sig2.true=0, tau.true=0, burn=burn, ortho=FALSE);
 
   sstat.1 = sum.stat(gb1);
   sstat.2 = sum.stat(gb2);
@@ -139,7 +140,7 @@ compare.it <- function(y, X, nsamp=10000,
                        alpha=0.5,
                        sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
                        tau=0.0, 
-                       burn=0, ntrials=1, ortho=FALSE, betaburn=0, use.hmc=FALSE)
+                       burn=0, ntrials=1, ortho=FALSE, betaburn=0, use.hmc=FALSE, inflate=1.0)
 {
   ## Returns a list of summary statistics, the last Gibbs MCMC, and a
   ## table with the average statistics over several runs.
@@ -153,9 +154,9 @@ compare.it <- function(y, X, nsamp=10000,
 
   for (i in 1:ntrials){
     
-    gb.tri = bridge.reg.tri(y, X, nsamp, alpha=alpha,
+    gb.tri = bridge.reg.tri(y, X, round(nsamp*inflate), alpha=alpha,
       sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
-      sig2=0.0, tau=tau, burn=burn, ortho=ortho, betaburn=betaburn, use.hmc=use.hmc);
+      sig2=0.0, tau=tau, burn=round(burn*inflate), ortho=ortho, betaburn=betaburn, use.hmc=use.hmc);
     gb.stb = bridge.reg.stb(y, X, nsamp, alpha=alpha,
       sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
       sig2=0.0, tau=tau, burn=burn, ortho=ortho)
@@ -246,13 +247,13 @@ hist.info <- function(info, cnames, P=ncol(info$tri.gb$beta), breaks=40)
 run.it <- function(y, X, nsamp=1000,  burn=100, 
                    alpha=0.5, sig2.shape=0.0, sig2.scale=0.0, nu.shape=2.0, nu.rate=2.0,
                    ntrials=1, tau=0.0,
-                   save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun", ortho=FALSE, betaburn=0, use.hmc=FALSE)
+                   save.it=FALSE, print.it=FALSE, plot.it=FALSE, name="somerun", ortho=FALSE, betaburn=0, use.hmc=FALSE, inflate=1.0)
 {
   ## Runs the comparison and plots/prints/saves the resulting data.
-  
+
   info = compare.it(y, X, nsamp=nsamp,
     alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, nu.shape, nu.rate, tau=tau,
-    burn=burn, ntrials=ntrials, ortho=ortho, betaburn=betaburn, use.hmc=use.hmc)
+    burn=burn, ntrials=ntrials, ortho=ortho, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)
 
   ## Make sure things look right.
   if (plot.it) {
@@ -340,7 +341,7 @@ if (run$EFRON) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="efron",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)
 
 }
 
@@ -368,7 +369,7 @@ if (run$DBI) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="DBI",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)
 
 }
 
@@ -399,7 +400,7 @@ if (run$BH) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="BH",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)  
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)  
 
 }
 
@@ -445,7 +446,7 @@ if (run$BHI) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=FALSE, plot.it=plot.it, name="BHI",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)
   
 }
 
@@ -483,7 +484,7 @@ if (run$NIR) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=TRUE, plot.it=plot.it, name="NIR",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)
 
 }
 
@@ -514,7 +515,7 @@ if (run$CC) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="CC",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)  
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)  
 
 }
 
@@ -545,7 +546,7 @@ if (run$CCI) {
   info <- run.it(y, X, nsamp=nsamp, burn=burn,
                  alpha=alpha, sig2.shape=0.0, sig2.scale=0.0, ntrials=ntrials, tau=tau, 
                  save.it=save.it, print.it=print.it, plot.it=plot.it, name="CCI",
-                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc)  
+                 ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc, inflate=inflate)  
 
 }
 
