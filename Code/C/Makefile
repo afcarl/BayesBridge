@@ -10,7 +10,7 @@ RINC = $(shell R CMD config --cppflags)
 RLNK = $(shell R CMD config --ldflags)
 
 # OPT = -g -Wall
-OPT = -g -Wall -O2 -DNDEBUG
+OPT = -g -Wall -O2 -DNDEBUG -Wunused -Wuninitialized
 # OPT = -03
 
 CC = g++
