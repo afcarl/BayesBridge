@@ -226,5 +226,61 @@ if (FALSE) {
     plot(h2, col="#20202020", border="#10101010", add=TRUE)
   }
   dev.off()
+
+  ################################################################################
+
+  alpha.a = 1.0
+  alpha.b = 1.0
+  
+  alpha = 0
+  tau = 0
+  sig2 = 0.0
+
+  nsamp = 100000
+  
+  ## out.C.tri = bridge.reg.tri(y, X, nsamp=nsamp*10, alpha=alpha, sig2.shape=sig2.shape, sig2.scale=sig2.scale,
+  ##   nu.shape=nu.shape, nu.rate=nu.rate, alpha.a=alpha.a, alpha.b=alpha.b,
+  ##   sig2.true=0.0, tau.true=tau, burn=burn)
+
+  out.C.stb = bridge.reg.stb(y, X, nsamp, alpha, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a=alpha.a, alpha.b=alpha.b,
+    sig2.true=0.0, tau.true=tau, burn=burn)
+
+  alpha.k = 0.9
+  out.k = bridge.reg.stb(y, X, nsamp, alpha.k, sig2.shape, sig2.scale, nu.shape, nu.rate, alpha.a=alpha.a, alpha.b=alpha.b,
+    sig2.true=0.0, tau.true=tau, burn=burn)
+
+  P = ncol(X);
+  bk = 100;
+
+  ## png("Images/alpha-bhi.png", width=600, height=300)
+  par(mfrow=c(1,2))
+  print(dim(X))
+  hist(out.C.stb$alpha, main="", xlab="", ylab="")
+  title(main="Posterior of alpha", xlab=expression(alpha), ylab="Freq.")
+  acf(out.C.stb$alpha, main="", xlab="", ylab="")
+  title(main="Autocorrelation of alpha", xlab="index", ylab="Autocorrelation")
+  ## dev.off()
+
+  P = ncol(X);
+  bk = 100;
+  
+  for (i in 1:P) {
+    png(paste("Images/alpha-known-unknown-", i, ".png", sep=""), width=600, height=300)
+    par(mfrow=c(1,2))
+    hist(out.C.stb$beta[,i], breaks=bk, main=paste(cnames[i], "(alpha unknown)"), xlab=expression(beta));
+    hist(out.k$beta[,i], breaks=bk, main=paste(cnames[i], "(alpha=0.9)"), xlab=expression(beta));
+    ## readline("<ENTER>");
+    dev.off();
+  }
+
+  quantile(x, probs = seq(0, 1, 0.01))
+           
+
+  apply(out.C.stb$beta, 2, mean)
+  apply(out.k$beta, 2, mean)
+
+  bridge.EM.R(y, X, alpha=mean(out.C.stb$alpha), ratio=mean(out.C.stb$tau)/mean(sqrt(out.C.stb$sig)), max.iter=100);
+  bridge.EM.R(y, X, alpha=alpha.k, ratio=mean(out.C.stb$tau)/mean(sqrt(out.C.stb$sig)), max.iter=100);
+  
   
 }
