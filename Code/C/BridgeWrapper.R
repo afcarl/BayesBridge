@@ -86,7 +86,7 @@ bridge.EM <- function(y, X,
       return(0)
     }
 
-    ok = check.parameters(N, R, 1, 1.0, 1.0, 1.0, 1.0) *
+    ok = check.parameters(N, R, 1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0) *
          check.EM(lambda.max, tol, max.iter);
 
     if (!ok) { break; }
