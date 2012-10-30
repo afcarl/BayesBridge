@@ -37,7 +37,7 @@
 #include "Matrix.h"
 #include "RNG.hpp"
 #include "retstable.h"
-#include <math.h>
+#include <cmath>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include "HmcSampler.h"
@@ -678,33 +678,58 @@ void BR::sample_beta_stable_ortho(MF beta, MF lambda, double alpha, double sig2,
     }
  }
 
+// void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r)
+// {
+
+//   Matrix VInv(XX);
+//   for(uint i=0; i<P; i++)
+//     VInv(i,i) += lambda(i) * sig2 / (tau * tau);
+//   // cout << "VInv:\n" << VInv;
+
+//   Matrix V;
+//   syminv(VInv, V);
+//   // cout << "V:\n" << V;
+
+//   Matrix L;
+//   chol(L, V);
+//   hprodeq(L, sqrt(sig2));
+//   // cout << "L:\n" << L;
+
+//   // The mean
+//   gemm(beta, V, Xy, 'N', 'N');
+//   // cout << "Beta:\n" << beta;
+
+//   Matrix ndraw(P);
+//   r.norm(ndraw, 0.0, 1.0);
+//   // cout << "ndraw:\n" << ndraw;
+
+//   gemm(beta, L, ndraw, 'N', 'N', 1.0, 1.0);
+
+// }
+
 void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, double tau, RNG& r)
 {
-
   Matrix VInv(XX);
   for(uint i=0; i<P; i++)
     VInv(i,i) += lambda(i) * sig2 / (tau * tau);
   // cout << "VInv:\n" << VInv;
 
-  Matrix V;
-  syminv(VInv, V);
-  // cout << "V:\n" << V;
-
-  Matrix L;
-  chol(L, V);
-  hprodeq(L, sqrt(sig2));
-  // cout << "L:\n" << L;
+  Matrix U;
+  chol(U, VInv, 'U');
 
   // The mean
-  gemm(beta, V, Xy, 'N', 'N');
-  // cout << "Beta:\n" << beta;
+  beta.copy(Xy);
+  trsm(U, beta, 'U', 'L', 'T');
+  trsm(U, beta, 'U', 'L');
 
   Matrix ndraw(P);
   r.norm(ndraw, 0.0, 1.0);
-  // cout << "ndraw:\n" << ndraw;
 
-  gemm(beta, L, ndraw, 'N', 'N', 1.0, 1.0);
+  trsm(U, ndraw, 'U', 'L');
 
+  double sig = sqrt(sig2);
+  for(int i=0; i<(int)P; i++)
+    beta(i) += sig * ndraw(i);
 }
 
 //------------------------------------------------------------------------------
