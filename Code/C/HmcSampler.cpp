@@ -8,6 +8,7 @@
 #define _USE_MATH_DEFINES   // for the constant M_PI
 // #include <cstdlib>
 #include <cmath>
+#include <ctime>
 #include <tr1/random>
 #include <Eigen/Dense>
 #include <magnet/math/quartic.hpp>
@@ -67,7 +68,7 @@ MatrixXd HmcSampler::sampleNext(bool returnTrace ) {
   VectorXd b = lastSample;
   VectorXd a = VectorXd(dim);   // initial velocity
 
-  double initial_check = _verifyConstraints(lastSample);
+  // double initial_check = _verifyConstraints(lastSample);
 
   int constraint_violations = 0;
 
@@ -349,7 +350,7 @@ Eigen::MatrixXd HmcSampler::rtnorm(const Eigen::MatrixXd& b,
   // std::cerr << "Fz: " << Fz << "\n";
   // std::cerr << "gz: " << gz.transpose() << "\n";
 
-  if (seed==-1) seed = time(NULL);
+  if (seed==-1) seed = std::time(NULL);
   HmcSampler hmc(d, seed);
 
   VectorXd tfm_iv = llt.matrixU() * (iv - m);

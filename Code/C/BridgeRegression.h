@@ -38,6 +38,7 @@
 #include "RNG.hpp"
 #include "retstable.h"
 #include <cmath>
+#include <ctime>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 #include "HmcSampler.h"
@@ -321,7 +322,7 @@ void BR::sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double
 {
   double m = -1.0;
   for(int j=0; j < (int)P; ++j) {
-    double m_j = fabs(beta(j)) / ( (1-u(j)) * pow(w(j), 1.0/alpha) );
+    double m_j = fabs(beta(j)) / ( (1-u(j)) * exp(log(w(j)) / alpha) );
     m = m < m_j ? m_j : m;
   }
   double a = tau2_shape + 0.5 * (double)P;
@@ -457,7 +458,12 @@ void BR::rtnorm_gibbs(double *betap,
 // Hamiltonian Mone Carlo
 void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed)
 {
-  if (seed==0) seed = time(NULL);
+  if (seed==0) {
+    // Since using ctime time is in std namespace.
+    seed = std::time(NULL);
+    // Checkout clock_gettime for POSIX systems.
+  }
+
   int d = P;
   HmcSampler hmc(d, seed);
   // double sig = sqrt(sig2);

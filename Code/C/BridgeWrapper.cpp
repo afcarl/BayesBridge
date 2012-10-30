@@ -28,7 +28,7 @@ int EM(Matrix & beta, MatrixFrame &y, MatrixFrame &X,
 	double tol, int max_iter, bool use_cg)
 {
   BridgeRegression br(X, y);
-  int iter;
+  int iter = -1;
 
   try{
     iter =  br.EM(beta, 1.0, ratio, alpha, lambda_max, tol, max_iter, use_cg);
