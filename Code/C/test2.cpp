@@ -6,26 +6,47 @@
 #include "HmcSampler.h"
 
 #include <iostream>
+#include <string>
+#include <GetPot>
+
 using std::cout;
+using std::string;
 
 int main(int argc, char** argv)
 {
+
+  GetPot cl(argc, argv);
+
+  string y_file = cl.follow("", "-y");
+  string X_file = cl.follow("", "-X");
+  string fpre   = cl.follow("prefix", "--name");
+
+  if (y_file.empty() || X_file.empty()) {
+    printf("Usage: test2 -y y.db -X X.db [--stable] [--ortho] [--samp 100000] [--burn 10000]\n");
+    return 0;
+  }
+
+  bool do_stb = cl.search("--stable");
+  bool ortho  = cl.search("--ortho");
+
+  uint M = cl.follow(100000, "--samp");
+  uint burn = cl.follow(10000, "--burn");
+
   // int d = 3;
   // int s = 1;
   // HmcSampler hmc(d, s);
 
   // The data.
-  Matrix X; X.read("X.lars", true);
+  // Matrix X; X.read("X.lars", true);
   // Matrix X; X.read("Q.lars", true);
-  Matrix y; y.read("Y.lars", true);
+  // Matrix y; y.read("Y.lars", true);
 
-  // Matrix X; X.read("X.nir", true);
-  // Matrix y; y.read("y.nir", true);  
+  Matrix X; X.read(X_file, true);
+  Matrix y; y.read(y_file, true);  
 
   // // True data.
   // Matrix beta_data; beta_data.read("beta.data", true);
 
-  uint M = 1000;
   uint P = X.cols();
   uint N = X.rows();
 
@@ -47,17 +68,27 @@ int main(int argc, char** argv)
   Matrix tau ((uint)1, (uint)1, M);
   Matrix alpha((uint)1, (uint)1, M);
 
-  bridge_regression(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100, 30, false);
-  // bridge_regression_ortho(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
+  double rt= 0;
+
+  if (!do_stb && !ortho) 
+    rt = bridge_regression(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, burn);
+  if (!do_stb && ortho)
+    rt = bridge_regression_ortho(beta, u, omega, shape, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, burn);
   
   Matrix lambda(N, (uint)1, M);
 
-  // bridge_regression_stable(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
-  // bridge_regression_stable_ortho(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, 100);
+  if (do_stb && !ortho) 
+    rt = bridge_regression_stable(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, burn);
+  if (do_stb && ortho)
+    rt = bridge_regression_stable_ortho(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, burn);
 
   printf("Regression done.  Write out.\n");
 
-  beta.write("beta.post");
+  beta.write(fpre.append("beta.post"));
+  
+  Matrix runtime(1);
+  runtime(0) = rt;
+
   // u.write("u.post");
   // omega.write("omega.post");
   // tau.write("tau.post");
