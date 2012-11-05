@@ -33,9 +33,9 @@ test2 : test2.cpp BridgeRegression.h libBridge.so
 	$(CC) test2.cpp -o test2 $(INC) $(OPT) $(GLIB) -L. -lBridge \
 	-lgsl -lblas -llapack
 
-# libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-# 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-# 	-lblas -llapack -lHmcSampler -lgsl -o libBridge.so
+libBridge.so : BridgeWrapper.h BridgeWrapper.cpp 
+	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
+	-lblas -llapack -lgsl -o libBridge.so
 
 # libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
 # 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
@@ -43,14 +43,14 @@ test2 : test2.cpp BridgeRegression.h libBridge.so
 # 	-DYA_BLAS -DYA_LAPACK -DYA_BLASMULT -latlas -lblas -llapack -framework vecLib	\
 # 	-lblas -llapack -lHmcSampler -lgsl -o libBridge.so
 
-libBridge.so : BridgeWrapper.h BridgeWrapper.cpp BridgeRegression.h 
-	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-	-undefined dynamic_lookup -single_module -multiply_defined suppress \
-	-L/usr/local/lib -framework R -Wl,-framework -Wl,CoreFoundation \
-	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran \
-	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. \
-	-lgsl -o libBridge.so 
-	# -lblas -llapack
+# libBridge.so : BridgeWrapper.h BridgeWrapper.cpp BridgeRegression.h 
+# 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
+# 	-undefined dynamic_lookup -single_module -multiply_defined suppress \
+# 	-L/usr/local/lib -framework R -Wl,-framework -Wl,CoreFoundation \
+# 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran \
+# 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. \
+# 	-lgsl -o libBridge.so 
+# 	# -lblas -llapack
 
 GBridge2 : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC -lgsl -lblas -llapack -lHmcSampler -o Bridge.so
