@@ -1,6 +1,11 @@
 # Include for Matrix and GSL.
-INC = -I$(HOME)/RV-Project/Code/C_Examples/MyLib/Matrix/ \
-	-I$(HOME)/RV-Project/Code/C_Examples/MyLib/RNG/ \
+# INC = -I$(HOME)/RV-Project/Code/C_Examples/MyLib/Matrix/ \
+# 	-I$(HOME)/RV-Project/Code/C_Examples/MyLib/RNG/ \
+# 	-I$(HOME)/Code/include/ \
+# 	-I$\./
+
+INC = -I$(HOME)/Code/Matrix/ \
+	-I$(HOME)/Code/RNG/ \
 	-I$(HOME)/Code/include/ \
 	-I$\./
 
@@ -26,8 +31,11 @@ test1 : test.c libHmcSampler.so
 
 test2 : test2.cpp BridgeRegression.h libBridge.so
 	$(CC) test2.cpp $(INC) $(OPT) $(GLIB) -L. -lBridge \
-	-DYA_BLAS -DYA_LAPACK -DYA_BLASMULT -lblas -llapack -framework vecLib	\
 	-lHmcSampler -lgsl -lblas -llapack  -o test2
+
+# libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
+# 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
+# 	-lblas -llapack -lHmcSampler -lgsl -o libBridge.so
 
 # libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
 # 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
