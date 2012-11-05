@@ -55,14 +55,15 @@
 #ifndef __BRIDGEREGRESSION__
 #define __BRIDGEREGRESSION__
 
-#include "Matrix.h"
-#include "RNG.hpp"
 #include "retstable.h"
 #include <cmath>
 #include <ctime>
 #include <Eigen/Core>
 #include <Eigen/SVD>
 // #include "HmcSampler.h"
+
+#include "Matrix.h"
+#include "RNG.hpp"
 
 #ifdef USE_R
 #include <R_ext/Utils.h>

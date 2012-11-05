@@ -20,18 +20,20 @@
 			      
 //////////////////////////////////////////////////////////////////////
 
+#include <time.h>
+// #include <math.h>
+#include <cmath>
+#include <exception>
+
+#include "BridgeWrapper.h"
+
+// Trying to avoid problems with length macro.
 #ifdef USE_R
 #include "R.h"
 #include "Rmath.h"
 #include <R_ext/Utils.h>
 #include <R_ext/PrtUtil.h>
 #endif
-
-#include "BridgeWrapper.h"
-#include <time.h>
-// #include <math.h>
-#include <cmath>
-#include <exception>
 
 // #include <algorithm>
 
