@@ -26,7 +26,6 @@
 ## library("msm");
 ## library(mvtnorm)
 ## library(truncnorm)
-library("tmg");
 
 draw.u <- function(tau, beta, w, alpha)
 {
@@ -234,30 +233,30 @@ draw.beta.3 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
   beta = irt %*% z;
 }
 
-## Hamiltonian MCMC
-draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
-{
-  require("tmg")
-  p = length(beta);
+## ## Hamiltonian MCMC
+## draw.beta.4 <- function(beta, bhat, xx, sig2, tau, u, w, alpha)
+## {
+##   require("tmg")
+##   p = length(beta);
 
-  b = (1-u)*{w^(1/alpha)}*tau
+##   b = (1-u)*{w^(1/alpha)}*tau
 
-  ## Constraints
-  F = matrix(nrow=2*p, ncol=p)
-  F[1:p,1:p]   = diag(1,p)
-  F[1:p+p,1:p] = -1 * diag(1,p)
-  g = as.vector(c(b,b))
+##   ## Constraints
+##   F = matrix(nrow=2*p, ncol=p)
+##   F[1:p,1:p]   = diag(1,p)
+##   F[1:p+p,1:p] = -1 * diag(1,p)
+##   g = as.vector(c(b,b))
 
-  ## print(b)
-  ## print(beta)
+##   ## print(b)
+##   ## print(beta)
 
-  prec = xx / sig2;
-  ell  = prec %*% bhat;
+##   prec = xx / sig2;
+##   ell  = prec %*% bhat;
 
-  out = rtmg(1, prec, ell, beta, F, g, burn.in = 30);
+##   out = rtmg(1, prec, ell, beta, F, g, burn.in = 30);
 
-  drop(out)
-}
+##   drop(out)
+## }
 
 ################################################################################
 
