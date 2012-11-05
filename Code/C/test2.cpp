@@ -3,7 +3,7 @@
 #include "BridgeWrapper.h"
 #include "BridgeRegression.h"
 
-#include "HmcSampler.h"
+// #include "HmcSampler.h"
 
 #include <iostream>
 #include <string>
