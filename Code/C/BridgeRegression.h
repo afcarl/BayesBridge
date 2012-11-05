@@ -62,7 +62,7 @@
 #include <ctime>
 #include <Eigen/Core>
 #include <Eigen/SVD>
-#include "HmcSampler.h"
+// #include "HmcSampler.h"
 
 #ifdef USE_R
 #include <R_ext/Utils.h>
@@ -486,7 +486,7 @@ void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed
   }
 
   int d = P;
-  HmcSampler hmc(d, seed);
+  // HmcSampler hmc(d, seed);
   // double sig = sqrt(sig2);
 
   // Eigen::MatrixXd tFtUy = F.transpose() * tUy;
@@ -528,7 +528,9 @@ void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed
   // std::cerr << "eb:\n" << eb.transpose() << "\n";
   // std::cerr << "iv:\n" << ebprev.transpose() << "\n";
 
-  Eigen::MatrixXd newbeta = hmc.rtnorm(ebhat, prec, Fb, gb, ebprev, 1, burn, false, seed);
+  Eigen::MatrixXd newbeta(d, 1);
+  // newbeta = hmc.rtnorm(ebhat, prec, Fb, gb, ebprev, 1, burn, false, seed);
+  printf("You should NOT be using hmc sampling.\n");
 
   // std::cout << "newbeta:\n" << newbeta << "\n";
 
@@ -602,6 +604,7 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
   // Matrix bhat(P);
   // least_squares(bhat);
 
+  use_hmc = false;
   if (!use_hmc) {
     int niter = burn + 1;
     for(int i=0; i<niter; i++) {
@@ -611,7 +614,7 @@ void BR::sample_beta(MF beta, const MF& beta_prev, const MF& u, const MF& omega,
   }
   else {
     // HMC
-    rtnorm_hmc(beta, beta_prev, sig2, b, burn, floor(r.unif() * 10000000));
+    // rtnorm_hmc(beta, beta_prev, sig2, b, burn, floor(r.unif() * 10000000));
     // Try setting the seed to 0 for all draws.  Look what happens.  Things are off.
   }
 
