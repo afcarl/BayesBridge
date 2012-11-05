@@ -37,7 +37,8 @@ test2 : test2.cpp BridgeRegression.h libBridge.so
 
 libBridge.so : BridgeWrapper.h BridgeWrapper.cpp BridgeRegression.h libHmcSampler.so
 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-	-undefined dynamic_lookup -single_module -multiply_defined suppress -L/usr/local/lib -framework R -Wl,-framework -Wl,CoreFoundation \
+	-undefined dynamic_lookup -single_module -multiply_defined suppress \
+	-L/usr/local/lib -framework R -Wl,-framework -Wl,CoreFoundation \
 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran \
 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. \
 	-lgsl -lHmcSampler -o libBridge.so 
