@@ -58,8 +58,9 @@
 #include "retstable.h"
 #include <cmath>
 #include <ctime>
-#include <Eigen/Core>
-#include <Eigen/SVD>
+// HMC HMC HMC
+// #include <Eigen/Core>
+// #include <Eigen/SVD>
 // #include "HmcSampler.h"
 
 #include "Matrix.h"
@@ -101,13 +102,13 @@ class BridgeRegression
   Matrix a;
   Matrix d;
 
-  Eigen::MatrixXd F;
-  Eigen::MatrixXd tUy;
-  Eigen::MatrixXd DtV;
-  Eigen::MatrixXd EXX;
-  Eigen::MatrixXd ebhat;
-  
-  Eigen::MatrixXd Fb;
+  // HMC HMC HMC
+  // Eigen::MatrixXd F;
+  // Eigen::MatrixXd tUy;
+  // Eigen::MatrixXd DtV;
+  // Eigen::MatrixXd EXX;
+  // Eigen::MatrixXd ebhat;
+  // Eigen::MatrixXd Fb;
 
  public:
 
@@ -212,51 +213,27 @@ BR::BridgeRegression(const MF& X_, const MF& y_)
   int n = X_.rows();
   int p = X_.cols();
 
-  // Eigen
-  // Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> M;
-  Eigen::MatrixXd EtV;
-  Eigen::MatrixXd Ea;
-  Eigen::MatrixXd Ed;
+  Matrix U;
+  if (n > p)
+    svd(U, d, tV, X, 'S');
+  else
+    svd(U, d, tV, X, 'A');
 
-  Eigen::Map<Eigen::MatrixXd> Xmap(&X(0), n, p);
-  Eigen::Map<Eigen::MatrixXd> ymap(&y(0), n, 1);
-  // Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeThinV);
-  // We need to deal with the underdetermined case.
-  Eigen::JacobiSVD<Eigen::MatrixXd> svd(Xmap, Eigen::ComputeThinU | Eigen::ComputeFullV);
-  Eigen::MatrixXd A = svd.matrixU() * svd.singularValues().asDiagonal();
+  Matrix A(U); prodonrow(A, d);
+  mult(a, A, y, 'T', 'N');
 
-  // For transforming and then dong truncated normal.
-  EtV = svd.matrixV().transpose();
-  Ea.resize(p, 1);
-  Ed.resize(p, 1);
-  int ddim = (p <= n) ? p : n;
-  Ea.block(0,0,ddim,1) = A.transpose() * ymap;
-  Ed.block(0,0,ddim,1) = svd.singularValues();
-
-  // Copy over.
-  tV.resize(p, p);
-  a.resize(p);
-  d.resize(p);
-  
-  for (int j=0; j<p; j++) {
-    a(j,0) = Ea(j,0);
-    d(j,0) = Ed(j,0);
-    for (int i=0; i<p; i++) {
-      tV(i,j) = EtV(i,j);
-    }
-  }
-
+  // HMC HMC HMC
   // For HMC: We need to have a non-singular precision for this to work.
-  F = svd.singularValues().asDiagonal().inverse() * EtV; // D^{-1} V'
-  DtV = svd.singularValues().asDiagonal() * EtV;
-  tUy = svd.matrixU().transpose() * Eigen::Map<Eigen::MatrixXd>(&y(0), n, 1);
+  // F = svd.singularValues().asDiagonal().inverse() * EtV; // D^{-1} V'
+  // DtV = svd.singularValues().asDiagonal() * EtV;
+  // tUy = svd.matrixU().transpose() * Eigen::Map<Eigen::MatrixXd>(&y(0), n, 1);
   
-  EXX = Eigen::Map<Eigen::MatrixXd>(&XX(0), p, p);
-  ebhat = Eigen::Map<Eigen::MatrixXd>(&bhat(0), p, 1);
+  // EXX = Eigen::Map<Eigen::MatrixXd>(&XX(0), p, p);
+  // ebhat = Eigen::Map<Eigen::MatrixXd>(&bhat(0), p, 1);
 
-  Fb.resize(2*p, p);
-  Fb.block(0,0,p,p) = Eigen::MatrixXd::Identity(p, p);
-  Fb.block(p,0,p,p) = -1.0 * Eigen::MatrixXd::Identity(p,p);
+  // Fb.resize(2*p, p);
+  // Fb.block(0,0,p,p) = Eigen::MatrixXd::Identity(p, p);
+  // Fb.block(p,0,p,p) = -1.0 * Eigen::MatrixXd::Identity(p,p);
 
 } // Bridge Regression
 
@@ -356,6 +333,7 @@ void BR::sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double
 //--------------------------------------------------------------------
 
 // Not using SVD.
+// CONSIDER TAKING THIS OUT.  THE SVD METHOD SEEMS TO BE THE WAY TO GO.
 void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
 {
   // Matrix RT, RTInv;
@@ -365,8 +343,8 @@ void BR::rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r)
   Matrix RTInvZSub(P, P);
   RTInvZSub.fill(0.0);
 
-  Matrix m(RT, bmean);
-  Matrix z(RT, beta);
+  Matrix m; mult(m, RT, bmean);
+  Matrix z; mult(z, RT, beta);
   double v = sig2; 
 
   Matrix ss("N", P-1);
@@ -433,7 +411,7 @@ void BR::rtnorm_gibbs(double *betap,
   double sig = sqrt(*sig2p);
   MatrixFrame beta(betap, P);
   MatrixFrame tV(tVp, P, P);
-  Matrix z(tV, beta);
+  Matrix z; mult(z, tV, beta);
   double *zp = &z(0);
   // Matrix vj(P);
 
@@ -477,68 +455,69 @@ void BR::rtnorm_gibbs(double *betap,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// Hamiltonian Mone Carlo
-void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed)
-{
-  if (seed==0) {
-    // Since using ctime time is in std namespace.
-    seed = std::time(NULL);
-    // Checkout clock_gettime for POSIX systems.
-  }
+// HMC HMC HMC
+// // Hamiltonian Mone Carlo
+// void BR::rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int burn, int seed)
+// {
+//   if (seed==0) {
+//     // Since using ctime time is in std namespace.
+//     seed = std::time(NULL);
+//     // Checkout clock_gettime for POSIX systems.
+//   }
 
-  int d = P;
-  // HmcSampler hmc(d, seed);
-  // double sig = sqrt(sig2);
+//   int d = P;
+//   // HmcSampler hmc(d, seed);
+//   // double sig = sqrt(sig2);
 
-  // Eigen::MatrixXd tFtUy = F.transpose() * tUy;
+//   // Eigen::MatrixXd tFtUy = F.transpose() * tUy;
 
-  // // Set initial value.
-  // Eigen::Map<Eigen::VectorXd> ebeta_prev(&beta_prev(0), d);
-  // Eigen::VectorXd z_init = (DtV * ebeta_prev - tUy) / sig;
-  // hmc.setInitialValue(z_init);
+//   // // Set initial value.
+//   // Eigen::Map<Eigen::VectorXd> ebeta_prev(&beta_prev(0), d);
+//   // Eigen::VectorXd z_init = (DtV * ebeta_prev - tUy) / sig;
+//   // hmc.setInitialValue(z_init);
 
-  // // Set constraints.
-  // for (int j=0; j<d; j++) {
-  //   double gj_plus = (b(j) + tFtUy(j)) / sig;
-  //   double gj_mnus = (b(j) - tFtUy(j)) / sig;
-  //   Eigen::VectorXd Fj = F.col(j);
-  //   hmc.addLinearConstraint(Fj, gj_plus);
-  //   hmc.addLinearConstraint(-1.0 * Fj, gj_mnus);
-  //   // double cj = Fj.dot(z_init);
-  //   // printf("cj: %g, gj+: %g, gj-: %g\n", cj, gj_plus, gj_mnus);
-  // }
+//   // // Set constraints.
+//   // for (int j=0; j<d; j++) {
+//   //   double gj_plus = (b(j) + tFtUy(j)) / sig;
+//   //   double gj_mnus = (b(j) - tFtUy(j)) / sig;
+//   //   Eigen::VectorXd Fj = F.col(j);
+//   //   hmc.addLinearConstraint(Fj, gj_plus);
+//   //   hmc.addLinearConstraint(-1.0 * Fj, gj_mnus);
+//   //   // double cj = Fj.dot(z_init);
+//   //   // printf("cj: %g, gj+: %g, gj-: %g\n", cj, gj_plus, gj_mnus);
+//   // }
 
-  // for (int i=0; i<niter-1; i++) {
-  //   hmc.sampleNext(false);
-  // }  
+//   // for (int i=0; i<niter-1; i++) {
+//   //   hmc.sampleNext(false);
+//   // }  
 
-  // // Returns a samples in row format.  I had some problems with this.
-  // Eigen::VectorXd draw = hmc.sampleNext(false);
-  // Eigen::MatrixXd newbeta = F.transpose() * (sig * draw + tUy);
+//   // // Returns a samples in row format.  I had some problems with this.
+//   // Eigen::VectorXd draw = hmc.sampleNext(false);
+//   // Eigen::MatrixXd newbeta = F.transpose() * (sig * draw + tUy);
 
-  // New attempt
-  Eigen::MatrixXd prec = EXX / sig2;
-  Eigen::MatrixXd eb   = Eigen::Map<Eigen::MatrixXd>(&b(0), d, 1);
-  Eigen::MatrixXd ebprev = Eigen::Map<Eigen::MatrixXd>(&beta_prev(0), d, 1);
-  Eigen::VectorXd gb(2*d);
+//   // New attempt
+//   Eigen::MatrixXd prec = EXX / sig2;
+//   Eigen::MatrixXd eb   = Eigen::Map<Eigen::MatrixXd>(&b(0), d, 1);
+//   Eigen::MatrixXd ebprev = Eigen::Map<Eigen::MatrixXd>(&beta_prev(0), d, 1);
+//   Eigen::VectorXd gb(2*d);
 
-  gb.segment(0,d) = eb;
-  gb.segment(d,d) = eb;
+//   gb.segment(0,d) = eb;
+//   gb.segment(d,d) = eb;
   
-  // std::cerr << "Fb:\n" << Fb << "\n";
-  // std::cerr << "eb:\n" << eb.transpose() << "\n";
-  // std::cerr << "iv:\n" << ebprev.transpose() << "\n";
+//   // std::cerr << "Fb:\n" << Fb << "\n";
+//   // std::cerr << "eb:\n" << eb.transpose() << "\n";
+//   // std::cerr << "iv:\n" << ebprev.transpose() << "\n";
 
-  Eigen::MatrixXd newbeta(d, 1);
-  // newbeta = hmc.rtnorm(ebhat, prec, Fb, gb, ebprev, 1, burn, false, seed);
-  printf("You should NOT be using hmc sampling.\n");
+//   Eigen::MatrixXd newbeta(d, 1);
+//   // newbeta = hmc.rtnorm(ebhat, prec, Fb, gb, ebprev, 1, burn, false, seed);
+//   printf("You should NOT be using hmc sampling.\n");
 
-  // std::cout << "newbeta:\n" << newbeta << "\n";
+//   // std::cout << "newbeta:\n" << newbeta << "\n";
 
-  for(int i=0; i<d; i++)
-     beta(i) = newbeta(i);
+//   for(int i=0; i<d; i++)
+//      beta(i) = newbeta(i);
 
-}
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -793,8 +772,8 @@ int BR::EM(Matrix& beta, double sig, double tau, double alpha,
   Matrix lambda(P);
   Matrix ss("W", P);
 
-  Matrix XX(X, X, 'T', 'N'); // Already exists
-  Matrix b(X, y, 'T', 'N');  // Already exists
+  Matrix XX; mult(XX, X, X, 'T', 'N'); // Already exists
+  Matrix b;  mult(b, X, y, 'T', 'N');  // Already exists
 
   double dist = tol + 1.0;
   int    iter = 0;
