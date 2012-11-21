@@ -53,8 +53,9 @@ int main(int argc, char** argv)
   double my_alpha = 0.5;
 
   // Least squares.
-  Matrix XX(X, X, 'T', 'N');
-  Matrix ls(X, y, 'T', 'N');
+  Matrix XX; mult(XX, X, X, 'T', 'N');
+  Matrix ls; mult(ls, X, y, 'T', 'N');
+
   symsolve(XX, ls);
   cout << "LS:\n" << ls;
 
