@@ -9,14 +9,17 @@ INC = -I$(HOME)/Code/Matrix/ \
 	-I$(HOME)/Code/include/ \
 	-I$\./
 
+MLIB = -L$(HOME)/Code/Matrix -L$(HOME)/Code/RNG
+
 GLIB = -L$(HOME)/Code/lib
 
 RINC = $(shell R CMD config --cppflags)
 RLNK = $(shell R CMD config --ldflags)
 
 # OPT = -g -Wall
-OPT = -g -Wall -O2 -DNDEBUG -Wunused -Wuninitialized
+OPT = -g -Wall -O2 -DNDEBUG
 # OPT = -03
+#  -Wunused -Wuninitialized
 
 CC = g++
 
@@ -30,12 +33,12 @@ test1 : test.c libHmcSampler.so
 	$(CC) test.c $(INC) $(OPT) $(GLIB) -L. -o test1 -lgsl -lHmcSampler
 
 test2 : test2.cpp BridgeRegression.h libBridge.so
-	$(CC) test2.cpp -o test2 $(INC) $(OPT) $(GLIB) -L. -lBridge \
+	$(CC) test2.cpp -o test2 $(INC) $(OPT) $(GLIB) -L. -Wl,-L=/Users/jwindle/Code/Matrix/ $(MLIB) -lBridge -lmatrix -lgrng \
 	-lgsl -lblas -llapack
 
 libBridge.so : BridgeWrapper.h BridgeWrapper.cpp 
-	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-	-lblas -llapack -lgsl -o libBridge.so
+	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. $(MLIB) -shared -fPIC \
+	-lblas -llapack -lgsl -lmatrix -lgrng -o libBridge.so
 
 # libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
 # 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
