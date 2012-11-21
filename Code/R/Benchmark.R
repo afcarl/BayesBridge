@@ -7,7 +7,7 @@ library("coda")
                                   ## Setup ##
 ################################################################################
 
-run <- list("EFRON" = FALSE, # Efron's diabetes data
+run <- list("EFRON" = TRUE, # Efron's diabetes data
             "DBI"   = FALSE, # Efron's diabetes data with interactions and squared terms.
             "BH"    = FALSE, # Boston Housing
             "BHI"   = FALSE, # Boston Housing with interactions
@@ -28,11 +28,11 @@ alpha = 0.5
 ntrials = 10
 tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
-use.hmc = FALSE
+## use.hmc = FALSE
 inflate = 1
 
-save.it  = TRUE  ## Write output to file
-plot.it  = FALSE ## Plot histograms
+save.it  = FALSE  ## Write output to file
+plot.it  = TRUE ## Plot histograms
 print.it = TRUE  ## Print summary.
 
 ################################################################################
@@ -83,7 +83,7 @@ if (FALSE) {
   nsamp = 100000
   burn  = 1000
 
-  gb1 = bridge.reg.tri(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, sig2.true=0, tau.true=0, burn=burn, ortho=FALSE, betaburn=betaburn, use.hmc=use.hmc);
+  gb1 = bridge.reg.tri(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, sig2.true=0, tau.true=0, burn=burn, ortho=FALSE, betaburn=betaburn);
   gb2 = bridge.reg.stb(y, X, nsamp, 0.5, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, sig2.true=0, tau.true=0, burn=burn, ortho=FALSE);
 
   sstat.1 = sum.stat(gb1);
@@ -144,6 +144,11 @@ compare.it <- function(y, X, nsamp=10000,
 {
   ## Returns a list of summary statistics, the last Gibbs MCMC, and a
   ## table with the average statistics over several runs.
+
+  if (use.hmc) {
+    print("CANNOT USE HMC.")
+    return(NA);
+  }
   
   tri.info = matrix(nrow=ntrials, ncol=5);
   colnames(tri.info) = c("ave.ESS", "sd.ESS", "ave.ESS.sec", "sd.ESS.sec", "runtime");
@@ -156,7 +161,7 @@ compare.it <- function(y, X, nsamp=10000,
     
     gb.tri = bridge.reg.tri(y, X, round(nsamp*inflate), alpha=alpha,
       sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
-      sig2=0.0, tau=tau, burn=round(burn*inflate), ortho=ortho, betaburn=betaburn, use.hmc=use.hmc);
+      sig2=0.0, tau=tau, burn=round(burn*inflate), ortho=ortho, betaburn=betaburn);
     gb.stb = bridge.reg.stb(y, X, nsamp, alpha=alpha,
       sig2.shape=sig2.shape, sig2.scale=sig2.scale, nu.shape=nu.shape, nu.rate=nu.rate,
       sig2=0.0, tau=tau, burn=burn, ortho=ortho)
