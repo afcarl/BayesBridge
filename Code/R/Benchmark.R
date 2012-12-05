@@ -25,10 +25,10 @@ oth <- list("EFRON" = FALSE,
 nsamp = 100000
 burn = 10000
 alpha = 0.5
-ntrials = 10
+ntrials = 1
 tau = 0 ## Set to <= 0 for unknown tau.
 betaburn = 0
-## use.hmc = FALSE
+use.hmc = FALSE
 inflate = 1
 
 save.it  = FALSE  ## Write output to file
