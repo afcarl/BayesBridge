@@ -58,6 +58,7 @@
 #include "retstable.h"
 #include <cmath>
 #include <ctime>
+#include <limits>
 // HMC HMC HMC
 // #include <Eigen/Core>
 // #include <Eigen/SVD>
@@ -123,10 +124,10 @@ class BridgeRegression
   void rtnorm_gibbs(MF beta, MF bmean, MF Prec, double sig2, MF b, RNG& r);
   void rtnorm_gibbs_wrapper(MF beta, double sig2, MF b, RNG& r);
 
-  void rtnorm_gibbs(double *betap, 
-		    double *ap, double *tVp, double *dp, 
-		    double* bp, double* sig2p, 
-		    int *Pp, RNG& r);
+  static void rtnorm_gibbs(double *betap, 
+			   double *ap, double *tVp, double *dp, 
+			   double* bp, double* sig2p, 
+			   int *Pp, RNG& r);
 
   void rtnorm_hmc(MF beta, MF beta_prev, double sig2, MF b, int niter=1, int seed=0);
 
@@ -324,9 +325,9 @@ void BR::sample_tau_tri(MF tau, const MF& beta, const MF& u, const MF& w, double
     double m_j = fabs(beta(j)) / ( (1-u(j)) * exp(log(w(j)) / alpha) );
     m = m < m_j ? m_j : m;
   }
-  double a = tau2_shape + 0.5 * (double)P;
-  double b = tau2_scale;
-  double phi = r.rtgamma_rate(a,b, 1.0/(m*m));
+  double ap = tau2_shape + 0.5 * (double)P;
+  double bp = tau2_scale;
+  double phi = r.rtgamma_rate(ap,bp, 1.0/(m*m));
   tau(0) = sqrt(1.0/phi);
 }
 
@@ -416,8 +417,8 @@ void BR::rtnorm_gibbs(double *betap,
   // Matrix vj(P);
 
   for (int i=0; i<P; i++) {
-    double lmax = -INFINITY;
-    double rmin =  INFINITY;
+    double lmax = -1.*std::numeric_limits<double>::max();
+    double rmin =     std::numeric_limits<double>::max();
 
     for (int j=0; j<P; j++) {
       double vji = tVp[i+j*P];
@@ -745,12 +746,12 @@ void BR::sample_beta_stable(MF beta, MF lambda, double alpha, double sig2, doubl
 //------------------------------------------------------------------------------
 void BR::sample_tau_stable(MF tau, const MF& beta, const MF& lambda, double tau2_shape, double tau2_scale, RNG& r)
 {
-  double a = tau2_shape + 0.5 * (double) P;
-  double b = tau2_scale;
+  double ap = tau2_shape + 0.5 * (double) P;
+  double bp = tau2_scale;
   for (int i = 0; i < (int)P; ++i)
-    b += 0.5 * beta(i)*beta(i)*lambda(i);
+    bp += 0.5 * beta(i)*beta(i)*lambda(i);
   // Don't forget the 0.5
-  double phi = r.gamma_rate(a,b);
+  double phi = r.gamma_rate(ap,bp);
   tau(0) = sqrt(1/phi);
 }
 
@@ -772,7 +773,7 @@ int BR::EM(Matrix& beta, double sig, double tau, double alpha,
   Matrix lambda(P);
   Matrix ss("W", P);
 
-  Matrix XX; mult(XX, X, X, 'T', 'N'); // Already exists
+  // Matrix XX; mult(XX, X, X, 'T', 'N'); // Already exists
   Matrix b;  mult(b, X, y, 'T', 'N');  // Already exists
 
   double dist = tol + 1.0;
