@@ -1,89 +1,71 @@
+## PARAMETERS
+
 # Include for Matrix and GSL.
-# INC = -I$(HOME)/RV-Project/Code/C_Examples/MyLib/Matrix/ \
-# 	-I$(HOME)/RV-Project/Code/C_Examples/MyLib/RNG/ \
-# 	-I$(HOME)/Code/include/ \
-# 	-I$\./
+UINC = -I./include -I$(HOME)/Code/Matrix -I$(HOME)/Code/RNG
 
-INC = -I$(HOME)/Code/Matrix/ \
-	-I$(HOME)/Code/RNG/ \
-	-I$(HOME)/Code/include/ \
-	-I$\./
-
-MLIB = -L$(HOME)/Code/Matrix -L$(HOME)/Code/RNG
-
+GINC = -I$(HOME)/Code/include
 GLIB = -L$(HOME)/Code/lib
 
 RINC = $(shell R CMD config --cppflags)
 RLNK = $(shell R CMD config --ldflags)
 
-# OPT = -g -Wall
-OPT = -g -Wall -O2 -DNDEBUG
-# OPT = -03
-#  -Wunused -Wuninitialized
+# make USE_R=-DUSE_R whatever
+# USE_R = -DUSE_R
+# USE_R = 
 
-CC = g++
+# ## For BLAS and LAPACK -- I need to figure out how to find these libraries for any system.
+# MKLLNK = -undefined dynamic_lookup -single_module -multiply_defined suppress \
+#        -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran \
+#        -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack
 
-## -DYA_BLAS -DYA_LAPACK -DYA_BLASMULT -lblas -llapack -framework vecLib
+VANLNK = -lblas -llapack
 
-# rbridge : Bridge.h Bridge.cpp
-all :
-	$(CC) Bridge.cpp $(INC) $(RINC) -DUSE_R $(OPT) -shared -fPIC -lblas -llapack -o libbridge.so $(RLNK)
+MATLNK = $(VANLNK)
 
-test1 : test.c libHmcSampler.so
-	$(CC) test.c $(INC) $(OPT) $(GLIB) -L. -o test1 -lgsl -lHmcSampler
+ifndef USE_R
+INC = $(UINC) $(GINC)
+LNK = $(GLIB) $(MATLNK) -lgsl
+DEP = GRNG.o 
+else
+INC = $(UINC) $(RINC)
+LNK = $(MATLNK) $(RLNK) 
+DEP = RRNG.o 
+endif
 
-test2 : test2.cpp BridgeRegression.h libBridge.so
-	$(CC) test2.cpp -o test2 $(INC) $(OPT) $(GLIB) -L. -Wl,-L=/Users/jwindle/Code/Matrix/ $(MLIB) -lBridge -lmatrix -lgrng \
-	-lgsl -lblas -llapack
+OPTS = -O2 $(USE_R) -g -DNDEBUG
+OPTS = -g -Wall -std=c++98  $(USE_R) ## -Wshadow
+## OPTS = -g -Wall -pedantic $(USE_R)
+## Note: pedantic kills eigen.
 
-libBridge.so : BridgeWrapper.h BridgeWrapper.cpp 
-	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. $(MLIB) -shared -fPIC \
-	-lblas -llapack -lgsl -lmatrix -lgrng -o libBridge.so
+sobj = BayesLogit.so
+obj  = retstable.o Matrix.o RNG.o $(DEP)
 
-# libBridge.so : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-# 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-# 	-undefined dynamic_lookup -single_module -multiply_defined suppress \
-# 	-DYA_BLAS -DYA_LAPACK -DYA_BLASMULT -latlas -lblas -llapack -framework vecLib	\
-# 	-lblas -llapack -lHmcSampler -lgsl -o libBridge.so
+## Link gsl last so that we will use R libraries when compiling for R.
+BayesBridge.so : $(obj) 
+	g++ -o BayesBridge.so $(obj) $(OPTS) -shared -fPIC $(LNK) $(GLIB) -lgsl
 
-# libBridge.so : BridgeWrapper.h BridgeWrapper.cpp BridgeRegression.h 
-# 	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-# 	-undefined dynamic_lookup -single_module -multiply_defined suppress \
-# 	-L/usr/local/lib -framework R -Wl,-framework -Wl,CoreFoundation \
-# 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran \
-# 	-L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. \
-# 	-lgsl -o libBridge.so 
-# 	# -lblas -llapack
+retstable.o : retstable.c retstable.h 
+	g++ $(OPTS) $(INC) -fPIC -o retstable.o -c retstable.c
 
-GBridge2 : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC -lgsl -lblas -llapack -lHmcSampler -o Bridge.so
+Matrix.o : MatrixFrame.o 
+	g++ $(OPTS) $(INC) -fPIC -c $(HOME)/Code/Matrix/Matrix.cpp -o Matrix.o
 
-GBridge : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-	$(CC) BridgeWrapper.cpp $(INC) $(GLIB) $(OPT) -L. -shared -fPIC \
-	-undefined dynamic_lookup -single_module -multiply_defined suppress -L/usr/local/lib -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. -framework R -Wl,-framework -Wl,CoreFoundation \
-	-lgsl  -lHmcSampler -o Bridge.so 
-	# -lblas -llapack	
+MatrixFrame.o : 
+	g++ $(OPTS) $(INC) -fPIC -c $(HOME)/Code/Matrix/MatrixFrame.cpp -o MatrixFrame.o
 
-RBridge : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-	$(CC) BridgeWrapper.cpp $(INC) $(RINC) $(RLNK) $(OPT) -L. -shared -fPIC -DUSE_R \
-	-undefined dynamic_lookup -single_module -multiply_defined suppress -L/usr/local/lib -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRblas -lgfortran -L/Library/Frameworks/R.framework/Resources/lib/x86_64 -lRlapack -F/Library/Frameworks/R.framework/.. -framework R -Wl,-framework -Wl,CoreFoundation \
-	 -lHmcSampler -o Bridge.so
-	#-lblas -llapack
+RNG.o : $(DEP)
+	g++ $(OPTS) $(INC) -fPIC -c $(HOME)/Code/RNG/RNG.cpp -o RNG.o 
 
-RBridge2 : BridgeWrapper.h BridgeWrapper.cpp libHmcSampler.so
-	$(CC) BridgeWrapper.cpp $(INC) $(RINC) $(RLNK) $(OPT) -L. -shared -fPIC -DUSE_R \
-	 -lHmcSampler -o Bridge.so -lblas -llapack -latlas -Bdirect,--hash-style=both,-Wl,-O1	
+GRNG.o: 
+	g++ $(INC) $(OPTS) -fPIC -c $(HOME)/Code/RNG/GRNG.cpp -o GRNG.o
 
-libbridge.dylib : Bridge.h Bridge.cpp
-	$(CC) Bridge.cpp $(INC) $(GLIB) $(OPT) -dynamiclib -fPIC -lgsl -lblas -llapack -o libbridge.dylib
-
-test : test.cpp BridgeRegression.h
-	$(CC) test.cpp $(INC) $(GLIB) $(OPT) -lgsl -lblas -llapack -o test
-
-libHmcSampler.so : HmcSampler.cpp HmcSampler.h
-	$(CC) HmcSampler.cpp $(INC) $(OPT) -shared -fPIC -o libHmcSampler.so
+RRNG.o: 
+	g++ $(INC) $(OPTS) -fPIC -c $(HOME)/Code/RNG/RRNG.cpp -o RRNG.o
 
 clean :
+	rm *.o
+
+clean.so :
 	rm *.so
 
 ################################################################################
