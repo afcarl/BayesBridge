@@ -13,6 +13,7 @@ $rsyncit $BASE/C/BridgeRegression.h    $BBDIR/src/
 $rsyncit $BASE/C/BridgeWrapper.h       $BBDIR/src/
 $rsyncit $BASE/C/BridgeWrapper.cpp     $BBDIR/src/
 $rsyncit $BASE/C/retstable.h           $BBDIR/src/
+$rsyncit $BASE/C/retstable.c           $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.cpp        $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.h          $BBDIR/src/
 
