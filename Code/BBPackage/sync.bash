@@ -10,10 +10,11 @@ BBDIR=$HOME/RPackage/BayesBridge/Code/BBPackage/BayesBridge
 
 # CPP files.
 $rsyncit $BASE/C/BridgeRegression.h    $BBDIR/src/
+$rsyncit $BASE/C/BridgeRegression.cpp  $BBDIR/src/
 $rsyncit $BASE/C/BridgeWrapper.h       $BBDIR/src/
 $rsyncit $BASE/C/BridgeWrapper.cpp     $BBDIR/src/
 $rsyncit $BASE/C/retstable.h           $BBDIR/src/
-$rsyncit $BASE/C/retstable.c           $BBDIR/src/
+$rsyncit $BASE/C/retstable.cpp         $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.cpp        $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.h          $BBDIR/src/
 
@@ -28,8 +29,6 @@ $rsyncit $MYLIB/RNG/RRNG.hpp               $BBDIR/src/RRNG.h
 $rsyncit $MYLIB/RNG/RNG.cpp                $BBDIR/src/
 $rsyncit $MYLIB/RNG/RRNG.cpp               $BBDIR/src/
 # $rsyncit $MYLIB/RandomVariates/Normal.hpp  $BBDIR/src/Normal.h
-
-
 
 # R files.
 $rsyncit $BASE/C/BridgeWrapper.R  $BBDIR/R/
