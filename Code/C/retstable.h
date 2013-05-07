@@ -1,9 +1,8 @@
-
 // This code has been taken from the copula package and slightly modified for
 // our use.  It is licensed under GPL 3.
 
-#ifndef __RESTABLE__
-#define __RESTABLE__
+#ifndef __RRETSTABLE__
+#define __RRETSTABLE__
 
 #include "RNG.hpp"
 

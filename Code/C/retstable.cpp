@@ -1,4 +1,3 @@
-
 // This code has been taken from the copula package and slightly modified for
 // our use.  It is licensed under GPL 3.
 

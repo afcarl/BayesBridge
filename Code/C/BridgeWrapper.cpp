@@ -804,7 +804,7 @@ void retstable_LD(double* x, double* alpha, double* V0, double* h, int* num)
     if (i%10000==0) R_CheckUserInterrupt();
     #endif
 
-    x[i] = retstable(h[i], alpha[i], r, V0[i]);
+    x[i] = retstable_LD(h[i], alpha[i], r, V0[i]);
   }
 
   #ifdef USE_R

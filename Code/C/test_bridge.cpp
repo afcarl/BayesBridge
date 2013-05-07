@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   string fpre   = cl.follow("prefix", "--name");
 
   if (y_file.empty() || X_file.empty()) {
-    printf("Usage: test2 -y y.db -X X.db [--stable] [--ortho] [--samp 100000] [--burn 10000]\n");
+    printf("Usage: test_gibbs -y y.db -X X.db [--stable] [--ortho] [--samp 100000] [--burn 10000]\n");
     return 0;
   }
 
@@ -41,14 +41,16 @@ int main(int argc, char** argv)
   // Matrix X; X.read("Q.lars", true);
   // Matrix y; y.read("Y.lars", true);
 
-  Matrix X; X.read(X_file, true);
-  Matrix y; y.read(y_file, true);  
+  Matrix X; X.load(X_file, true);
+  Matrix y; y.load(y_file, true);  
 
   // // True data.
   // Matrix beta_data; beta_data.read("beta.data", true);
 
   uint P = X.cols();
   uint N = X.rows();
+
+  printf("N: %i, P: %i\n", N, P);
 
   double my_alpha = 0.5;
 
@@ -57,7 +59,7 @@ int main(int argc, char** argv)
   Matrix ls; mult(ls, X, y, 'T', 'N');
 
   symsolve(XX, ls);
-  cout << "LS:\n" << ls;
+  // cout << "LS:\n" << ls << "\n";
 
   Matrix beta(P      , (uint)1, M);
 
@@ -83,9 +85,12 @@ int main(int argc, char** argv)
   if (do_stb && ortho)
     rt = bridge_regression_stable_ortho(beta, lambda, sig2, tau, alpha, y, X, 0.0, 0.0, 2.0, 2.0, 1.0, 1.0, 0.0, 0.0, my_alpha, burn);
 
-  printf("Regression done.  Write out.\n");
+  printf("Regression done.\n");
+  // beta.write(fpre.append("beta.post"));
 
-  beta.write(fpre.append("beta.post"));
+  beta.reshape(P, M);
+  cout << "LS PMean" << "\n";
+  cout << ls.cbind(rowMeans(beta)) << "\n";
   
   Matrix runtime(1);
   runtime(0) = rt;
