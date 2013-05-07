@@ -85,7 +85,9 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
       ## lambda
       if (!known.lambda) {
         for(j in 1:p)
-          lambda[j] = 2 * retstable.ld(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
+          lambda[j] = 2 * retstable.ld(0.5 * alpha, 1.0, beta[j]^2 / tau^2);
+          ## using copula:
+          ## 2 * retstable(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
       }
 
       ## beta
@@ -154,7 +156,7 @@ if (FALSE) {
   tau = 100.0
   
   bridge.tri = bridge.reg.know.sig2(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2=sig2, tau=tau);
-  bridge.stb = bridge.stable(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2, tau=tau, verbose=1000);
+  bridge.stb = bridge.by.nmix(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2, tau=tau, verbose=1000);
 
   ## bridge.tri.R <- bridge.reg.know.sig2.R(y, X, nsamp=nsamp, alpha=0.5, burn=burn,
   ##                                        sig2=sig2, tau=tau, verbose=1000);
