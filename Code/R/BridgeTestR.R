@@ -284,3 +284,78 @@ if (FALSE) {
   
   
 }
+
+################################################################################
+                                   ## TEST ##
+################################################################################
+
+if (FALSE) {
+
+  ## source("BridgeByStable.R")
+  ## source("bridge2-MCMC.R")
+  ## source("Bridge.R")
+  ## library("copula")
+  library("coda")
+  library("BayesBridge")
+  library("chemometrics")
+  
+  ## data(diabetes)
+  load("~/RPackage/BayesBridge/Code/C/diabetes.RData");
+  lm1 = lm(y ~ x, data=diabetes);
+  X = model.matrix(y ~ x, data=diabetes);
+  y = diabetes$y
+
+  data("NIR", package="chemometrics")
+  y = NIR$yGlcEtOH[,1]
+  X = cbind(1.0, NIR$xNIR);
+  X = as.matrix(X);
+
+  data("BostonHousing", package="mlbench")
+  y = BostonHousing$medv
+  X = model.matrix(medv ~ ., data=BostonHousing);
+
+  nsamp = 4000;
+  burn = 0
+
+  ## sig2 = mean(lm1$res^2);
+  sig2 = mean((y-PPM(X) %*% y)^2);
+  tau = 100.0
+  
+  bridge.tri = bridge.reg.know.sig2(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2=sig2, tau=tau);
+  bridge.stb = bridge.by.nmix(y, X, nsamp=nsamp, burn=burn, alpha=0.5, sig2, tau=tau, verbose=1000);
+
+  ## bridge.tri.R <- bridge.reg.know.sig2.R(y, X, nsamp=nsamp, alpha=0.5, burn=burn,
+  ##                                        sig2=sig2, tau=tau, verbose=1000);
+
+  bridge.tri.R <- bridge(y, X, nsamp=nsamp, alpha=0.5, burn=burn,
+                         sig2=sig2, tau=tau, verbose=1000);
+
+  bridge.em = bridge.EM(y, X, alpha=0.5, ratio=tau/sqrt(sig2));
+  
+  k = 3;
+  sstat = matrix(nrow=ncol(X), ncol=k*3);
+  
+  sstat[,1] = apply(bridge.tri$beta, 1, mean);
+  sstat[,4] = apply(bridge.stb$beta, 2, mean);
+  sstat[,7] = apply(bridge.tri.R$beta, 2, mean);
+  
+  sstat[,2] = apply(bridge.tri$beta, 1, sd);
+  sstat[,5] = apply(bridge.stb$beta, 2, sd);
+  sstat[,8] = apply(bridge.tri.R$beta, 2, sd);
+
+  sstat[,3] = effectiveSize(t(bridge.tri$beta))
+  sstat[,6] = effectiveSize(bridge.stb$beta)
+  sstat[,9] = effectiveSize(bridge.tri.R$beta)
+
+  sstat
+
+  for (i in 1:11) {
+    par(mfrow=c(1,2))
+    hist(bridge.tri$beta[i,], prob=TRUE, breaks=100, main=colnames(X)[i])
+    abline(v=bridge.em[i], col=2)
+    hist(bridge.stb$beta[,i], prob=TRUE, breaks=100)
+    abline(v=bridge.em[i], col=2)
+    readline("<ENTER>")
+  }
+  
+}
