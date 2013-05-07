@@ -121,7 +121,7 @@ bridge.EM <- function(y, X,
              as.integer(P), as.integer(N),
              lambda.max, tol, as.integer(max.iter),
              as.integer(use.cg),
-             PACKAGE="Bridge");
+             PACKAGE="BayesBridge");
 
     output = OUT[[1]]; # beta
     rownames(output) = colnames(X);
@@ -176,7 +176,7 @@ bridge.reg.tri <- function(y, X,
               sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M),
               as.integer(burn), rtime, as.integer(ortho), as.integer(betaburn), as.integer(use.hmc),
-              PACKAGE="Bridge");
+              PACKAGE="BayesBridge");
 
     output <- list("beta"=t(OUT[[1]]), "u"=t(OUT[[2]]), "w"=t(OUT[[3]]), "shape"=t(OUT[[4]]),
                    "sig2"=OUT[[5]], "tau"=OUT[[6]], "alpha"=OUT[[7]],
@@ -225,7 +225,7 @@ bridge.reg.stb <- function(y, X,
               alpha.a, alpha.b,
               sig2.true, tau.true, alpha.true,
               as.integer(P), as.integer(N), as.integer(M), as.integer(burn), rt, as.integer(ortho),
-              PACKAGE="Bridge");
+              PACKAGE="BayesBridge");
 
     output = list("beta"=t(OUT[[1]]), "lambda"=t(OUT[[2]]), "sig2"=OUT[[3]], "tau"=OUT[[4]], "alpha"=OUT[[5]], "runtime"=OUT[[21]])
     colnames(output$beta) = colnames(X);
@@ -300,7 +300,7 @@ rtnorm.left <- function(num=1, left=0.0, mu=0.0, sig=1.0)
 
     if (length(left)  != num) { left  = array(left,  num); }
     
-    OUT = .C("rtnorm_left", x, left, mu, sig, as.integer(num), PACKAGE="Bridge");
+    OUT = .C("rtnorm_left", x, left, mu, sig, as.integer(num), PACKAGE="BayesBridge");
 
     OUT[[1]]
 }
@@ -330,7 +330,7 @@ rtnorm.both <- function(num=1, left=-1.0, right=1.0, mu=0.0, sig=1.0)
     if (length(left)  != num) { left  = array(left,  num); }
     if (length(right) != num) { right = array(right, num); }
 
-    OUT = .C("rtnorm_both", x, left, right, mu, sig, as.integer(num), PACKAGE="Bridge");
+    OUT = .C("rtnorm_both", x, left, right, mu, sig, as.integer(num), PACKAGE="BayesBridge");
 
     OUT[[1]]
 }
@@ -369,13 +369,13 @@ rtnorm <- function(num=1, mu=0.0, sig=1.0, left=-Inf, right=Inf)
   n.b = sum(b);
 
   if (n.b > 0) {
-    x[b] = .C("rtnorm_both", x[b], left[b], right[b], mu[b], sig[b], as.integer(n.b), PACKAGE="Bridge")[[1]];
+    x[b] = .C("rtnorm_both", x[b], left[b], right[b], mu[b], sig[b], as.integer(n.b), PACKAGE="BayesBridge")[[1]];
   }
   if (n.r > 0) {
-    x[r] = -1*.C("rtnorm_left", x[r], -1*right[r], -1*mu[r], sig[r], as.integer(n.r), PACKAGE="Bridge")[[1]];
+    x[r] = -1*.C("rtnorm_left", x[r], -1*right[r], -1*mu[r], sig[r], as.integer(n.r), PACKAGE="BayesBridge")[[1]];
   }
   if (n.l > 0) {
-    x[l] = .C("rtnorm_left", x[l], left[l], mu[l], sig[l], as.integer(n.l), PACKAGE="Bridge")[[1]]
+    x[l] = .C("rtnorm_left", x[l], left[l], mu[l], sig[l], as.integer(n.l), PACKAGE="BayesBridge")[[1]]
   }
   if (n.u > 0) {
     x[u] = rnorm(n.u, mu[u], sig[u]);
@@ -408,7 +408,35 @@ rrtgamma <- function(num=1, shape=1.0, rate=1.0, rtrunc=1.0, scale=1.0/rate)
   
   x = rep(0, num);
 
-  out = .C("rrtgamma_rate", x, shape, rate, rtrunc, as.integer(num), PACKAGE="Bridge");
+  out = .C("rrtgamma_rate", x, shape, rate, rtrunc, as.integer(num), PACKAGE="BayesBridge");
+
+  out[[1]]
+}
+
+retstable.ld <- function(num=1, alpha=1, V0=1, h=1)
+{
+  if (!all(V0>0)) {
+    print("V0 must be > 0.");
+    return(NA);
+  }
+
+  if (!all(h>=0)) {
+    print("h must be >= 0");
+    return(NA);
+  }
+
+  if (!all(alpha>0) || !all(alpha<=1)) {
+    print("alpha must be in (0,1].");
+    return(NA);
+  }
+
+  alpha = array(alpha, num);
+  h     = array(h    , num);
+  V0    = array(V0   , num);
+
+  x = rep(0, num)
+
+  out = .C("retstable_LD", x, alpha, V0, h, as.integer(num), PACKAGE="BayesBridge");
 
   out[[1]]
 }
