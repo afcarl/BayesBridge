@@ -28,7 +28,7 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
                           burn=100, sig2=0.0, tau=0.0, verbose=500,
                           beta.true=NULL, lambda.true=NULL)
 {
-  require("copula");
+  ## require("copula"); ## No longer required.  Adapted implementation to BayesBridge.
 
   ## Set up.
   X <- as.matrix(X)
@@ -85,7 +85,7 @@ bridge.nmix.R <- function(y, X, nsamp, alpha=0.5, sig2.shape=0.0, sig2.scale=0.0
       ## lambda
       if (!known.lambda) {
         for(j in 1:p)
-          lambda[j] = 2 * retstable(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
+          lambda[j] = 2 * retstable.ld(0.5 * alpha, 1.0, beta[j]^2 / tau^2, method="LD");
       }
 
       ## beta
@@ -126,7 +126,7 @@ if (FALSE) {
   ## source("BridgeByStable.R")
   ## source("bridge2-MCMC.R")
   ## source("Bridge.R")
-  library("copula")
+  ## library("copula")
   library("coda")
   library("BayesBridge")
   library("chemometrics")
