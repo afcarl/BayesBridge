@@ -7,7 +7,7 @@ library("coda")
                                   ## Setup ##
 ################################################################################
 
-run <- list("EFRON" = TRUE, # Efron's diabetes data
+run <- list("EFRON" = FALSE, # Efron's diabetes data
             "DBI"   = FALSE, # Efron's diabetes data with interactions and squared terms.
             "BH"    = FALSE, # Boston Housing
             "BHI"   = FALSE, # Boston Housing with interactions
@@ -18,7 +18,7 @@ run <- list("EFRON" = TRUE, # Efron's diabetes data
 ## Ortogonalizing matrices by QR.
 oth <- list("EFRON" = FALSE,
             "DBI"   = FALSE,
-            "BH"    = FALSE,
+            "BH"    = TRUE,
             "BHI"   = FALSE)
 
 ## RUN INFO
@@ -44,8 +44,8 @@ if (use.library) {
   ## library("BayesBridge", lib.loc="~/RPackage/BayesBridge/Code/BBPackage/Test/");
   library("BayesBridge");
 } else {
-  if (is.loaded("Bridge.so")) dyn.unload("Bridge.so");
-  if (!is.loaded("Bridge.so")) dyn.load("Bridge.so");
+  if (is.loaded("BayesBridge.so")) dyn.unload("BayesBridge.so");
+  if (!is.loaded("BayesBridge.so")) dyn.load("BayesBridge.so");
   source("~/RPackage/BayesBridge/Code/C/BridgeWrapper.R");
 }
 
