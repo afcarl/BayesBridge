@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copy the necessary files to the BayesLogit Package directory.
 
-rsyncit="rsync -Crvzut --exclude-from=$HOME/.rsync-exclude $@"
+rsyncit="rsync -Crzut --exclude-from=$HOME/.rsync-exclude $@"
 
 BASE=$HOME/RPackage/BayesBridge/Code
 MYLIB=$HOME/Code

@@ -2,7 +2,7 @@
 log.tau.grid = seq(-10, 0, 0.5);
 
 trace.beta <- function(y, X, alpha=0.5, ratio.grid=exp(seq(-20,20,0.1)),
-                       tol=1e-9, max.iter=30, use.cg=FALSE, plot.it=FALSE)
+                       tol=1e-9, max.iter=200, use.cg=FALSE, plot.it=FALSE)
 {
   X = as.matrix(X);
   N = dim(X)[1];
@@ -36,5 +36,4 @@ trace.beta <- function(y, X, alpha=0.5, ratio.grid=exp(seq(-20,20,0.1)),
   
   list("beta"=beta, "grid"=ratio.grid, "log.grid"=log.grid)
 }
-
 

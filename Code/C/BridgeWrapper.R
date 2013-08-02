@@ -144,7 +144,7 @@ bridge.reg.tri <- function(y, X,
                            nu.shape=2.0, nu.rate=2.0,
                            alpha.a=1.0, alpha.b=1.0,
                            sig2.true=0.0, tau.true=0.0,
-                           burn=500, ortho=FALSE, betaburn=0)
+                           burn=500, ortho=FALSE, betaburn=0, extras=FALSE)
 {
     N = length(y);
     R = dim(X)[1];
@@ -166,6 +166,7 @@ bridge.reg.tri <- function(y, X,
     alpha = array(0, dim=c(M));
 
     use.hmc = FALSE;
+    if (!extras) print("Variable extras only for Package testing.")
     
     OUT <- .C("bridge_regression",
               beta, u, omega, shape, sig2, tau, alpha,

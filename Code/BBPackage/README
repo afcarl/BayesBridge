@@ -20,6 +20,8 @@ From the command line in this directory do
 If you use Mac and do not have XCode try installing the BINARY:
 (WARNING: you need a recent version of OS X for this to work.)
 
+(Also, to build a binary do R CMD INSTALL --build)
+
 From the command line in this directory do
 
   R CMD INSTALL -l Test/ BayesBridge_0.0-1.tgz
