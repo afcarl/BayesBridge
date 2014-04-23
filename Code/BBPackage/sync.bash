@@ -18,7 +18,7 @@ $rsyncit $BASE/C/retstable.cpp         $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.cpp        $BBDIR/src/
 # $rsyncit $BASE/C/HmcSampler.h          $BBDIR/src/
 
-$rsyncit $BASE/C/magnet/ $BBDIR/inst/include/magnet/
+# $rsyncit $BASE/C/magnet/ $BBDIR/inst/include/magnet/
 
 $rsyncit $MYLIB/Matrix/Matrix.h            $BBDIR/src/
 $rsyncit $MYLIB/Matrix/MatrixFrame.h       $BBDIR/src/
