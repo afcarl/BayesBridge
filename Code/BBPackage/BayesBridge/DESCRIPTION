@@ -1,6 +1,6 @@
 Package: BayesBridge
-Version: 0.4
-Date: 2012-05-07
+Version: 0.6
+Date: 2015-02-13
 Title: Bridge Regression
 Author: Nicholas G. Polson, James G. Scott, and Jesse Windle
 Maintainer: Jesse Windle <jesse.windle@gmail.com>
